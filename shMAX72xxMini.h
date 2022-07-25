@@ -1,0 +1,348 @@
+#pragma once
+
+#include <avr/pgmspace.h>
+#include <Arduino.h>
+#include <SPI.h>
+
+// коды операций для MAX7221 и MAX7219
+#define OP_NOOP 0         // пустая команда, ничего не делать
+#define OP_DIGIT0 1       // первая строка
+#define OP_DIGIT1 2       // вторая строка
+#define OP_DIGIT2 3       // третья строка
+#define OP_DIGIT3 4       // четвертая строка
+#define OP_DIGIT4 5       // пятая строка
+#define OP_DIGIT5 6       // шестая строка
+#define OP_DIGIT6 7       // седьмая строка
+#define OP_DIGIT7 8       // восьмая строка
+#define OP_DECODEMODE 9   // режим декодирования; 1 - включен, 0 - отключен
+#define OP_INTENSITY 10   // яркость; 0-15
+#define OP_SCANLIMIT 11   // ограничение на работу со строками; 0-7
+#define OP_SHUTDOWN 12    // отключение устройства; 0 - отключено, 1 - включено
+#define OP_DISPLAYTEST 15 // тест дисплея, зажигает все сегменты/светодиоды
+
+// numDevices - количество устройств в каскаде 
+template <byte numDevices>
+class shMAX72xxMini
+{
+private:
+  // массив байт для отправки в устройства
+  byte spidata[numDevices * 2];
+  // массив состояния всех светодиодов в устройствах
+  byte status[numDevices * 8];
+  byte SPI_CS;
+  bool flip = false; // отразить изображение
+  byte direct = 0;   // поворот изображения, 0-3
+
+  // отправка одиночной команды в устройство
+  void spiTransfer(byte addr, byte opcode, byte data)
+  {
+    byte offset = addr * 2;
+    byte maxbytes = numDevices * 2;
+
+    for (byte i = 0; i < maxbytes; i++)
+    {
+      spidata[i] = (byte)0;
+    }
+    // готовим данные для отправки
+    spidata[offset + 1] = opcode;
+    spidata[offset] = data;
+
+    // отправка данных
+    digitalWrite(SPI_CS, LOW);
+    for (byte i = maxbytes; i > 0; i--)
+    {
+      SPI.transfer(spidata[i - 1]);
+    }
+    digitalWrite(SPI_CS, HIGH);
+  }
+
+  // изменение порядка следования битов в байте
+  byte reverseByte(byte b)
+  {
+    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+    return (b);
+  }
+
+  // отрисовка столбца
+  void _setColumn(byte addr, byte col, byte value, bool upd)
+  {
+    byte val;
+
+    for (byte row = 0; row < 8; row++)
+    {
+      val = value >> (7 - row);
+      val = val & 0x01;
+      _setLed(addr, row, col, val, upd);
+    }
+  }
+
+  // отрисовка строки
+  void _setRow(byte addr, byte row, byte value, bool upd)
+  {
+    byte offset = addr * 8;
+    status[offset + row] = value;
+    if (upd)
+    {
+      spiTransfer(addr, row + 1, status[offset + row]);
+    }
+  }
+
+  // отрисовка одиночного светодиода
+  void _setLed(byte addr, byte row, byte column, boolean state, bool upd)
+  {
+    byte offset = addr * 8;
+    byte val = 0x00;
+
+    val = B10000000 >> column;
+    if (state)
+    {
+      status[offset + row] = status[offset + row] | val;
+    }
+    else
+    {
+      val = ~val;
+      status[offset + row] = status[offset + row] & val;
+    }
+    if (upd)
+    {
+      spiTransfer(addr, row + 1, status[offset + row]);
+    }
+  }
+
+  // обновление; возможно обновление как только буфера, так и изображения на матрице; возможно одновременное стирание буфера (и матрицы, соответсвенно)
+  void _update(byte addr, bool clear = false, bool transfer = true)
+  {
+    byte offset = addr * 8;
+    for (byte i = 0; i < 8; i++)
+    {
+      if (clear)
+      {
+        status[offset + i] = 0;
+      }
+      if (transfer)
+      {
+        spiTransfer(addr, i + 1, status[offset + i]);
+      }
+    }
+  }
+
+public:
+  // Подключение устройства к Ардуино:
+  // DataIn - к пину D11
+  // CLK    - к пину D13
+  // CS     - к пину csPin (обычно это пин D10)
+  // numDevices - количество устройств в каскаде
+  shMAX72xxMini(byte csPin)
+  {
+    SPI_CS = csPin;
+    pinMode(SPI_CS, OUTPUT);
+    digitalWrite(SPI_CS, HIGH);
+    SPI.begin();
+    for (byte i = 0; i < numDevices; i++)
+    {
+      spiTransfer(i, OP_DISPLAYTEST, 0);
+      spiTransfer(i, OP_SCANLIMIT, 7);
+      spiTransfer(i, OP_DECODEMODE, 0);
+      spiTransfer(i, OP_SHUTDOWN, 0);
+      clearDevice(i, true);
+    }
+  }
+
+  // отключить или включить устройство
+  // addr - индекс устройства в каскаде, начиная с нуля
+  // off_device - true - отключить устройство, false - включить устройство
+  void shutdownDevice(byte addr, bool off_device)
+  {
+    if (addr >= numDevices)
+    {
+      return;
+    }
+
+    spiTransfer(addr, OP_SHUTDOWN, !off_device);
+  }
+
+  // отключить или включить все устройства в каскаде
+  // off_device - true - отключить устройства, false - включить устройства
+  void shutdownAllDevices(bool off_device)
+  {
+    for (byte addr = 0; addr < numDevices; addr++)
+    {
+      spiTransfer(addr, OP_SHUTDOWN, !off_device);
+    }
+  }
+
+  // установить угол поворота изображения на всех устройствах
+  // dir - угол поворота изображения, 0-3
+  void setDirection(byte dir) { direct = dir % 4; }
+
+  // включить отражение изображения по горизонтали (по строкам) на всех устройствах
+  // toFlip - true - включить отражение false - отключить отражение
+  void setFlip(bool toFlip) { flip = toFlip; }
+
+  // получить количество устройств в каскаде
+  byte getDeviceCount() { return (numDevices); }
+
+  // установить количество строк для обработки устройством
+  // addr - индекс устройства в каскаде, начиная с нуля
+  // limit - количество строк, 1-8
+  void setScanLimit(byte addr, byte limit)
+  {
+    if (addr >= numDevices)
+    {
+      return;
+    }
+
+    limit = (limit == 0) ? 0 : (limit <= 8) ? limit - 1 : 7;
+    spiTransfer(addr, OP_SCANLIMIT, limit);
+  }
+
+  // установить яркость свечения светодиодов устройства
+  // addr - индекс устройства в каскаде, начиная с нуля
+  // intensity - яркость свечения, 0-15 (при значении 0 светодиоды не гаснут)
+  void setBrightness(byte addr, byte intensity)
+  {
+    if (addr >= numDevices)
+    {
+      return;
+    }
+
+    intensity = (intensity <= 15) ? intensity : 15;
+    spiTransfer(addr, OP_INTENSITY, intensity);
+  }
+
+  // очистить устройство
+  // addr - индекс устройства в каскаде, начиная с нуля
+  // upd - true - обновить изображение сразу, иначе очистится только буфер устройства, изображение будет обновлено только после вызова метода update
+  void clearDevice(byte addr, bool upd = false)
+  {
+    if (addr >= numDevices)
+    {
+      return;
+    }
+
+    _update(addr, true, upd);
+  }
+
+  // очистить все устройства
+  // upd - true - обновить изображение сразу, иначе очистится только буфер устройств, изображение будет обновлено только после вызова метода update
+  void clearAllDevices(bool upd = false)
+  {
+    for (byte addr = 0; addr < numDevices; addr++)
+    {
+      _update(addr, true, upd);
+    }
+  }
+
+  // установить состояние одиночного светодиода устройства с учетом нужного поворота и отражения изображения
+  // addr - индекс устройства в каскаде, начиная с нуля
+  // row - строка (координата Y)
+  // column - столбец (координата X)
+  // state - устанавливаемое состояние светодиода
+  // upd - true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
+  void setLed(byte addr, byte row, byte column, boolean state, bool upd = false)
+  {
+    if (addr >= numDevices || row > 7 || column > 7)
+    {
+      return;
+    }
+
+    byte a = row;
+    byte b = column;
+    switch (direct)
+    {
+    case 0:
+      column = (flip) ? 7 - b : b;
+      break;
+    case 1:
+      column = 7 - a;
+      row = (flip) ? 7 - b : b;
+      break;
+    case 2:
+      column = (flip) ? b : 7 - b;
+      row = 7 - a;
+      break;
+    case 3:
+      column = a;
+      row = (flip) ? b : 7 - b;
+      break;
+    }
+    _setLed(addr, row, column, state, upd);
+  }
+
+  // установить строку устройства с учетом нужного поворота и отражения изображения
+  // addr - индекс устройства в каскаде, начиная с нуля
+  // row - строка (координата Y)
+  // value - битовая маска, в которой каждый бит соотвествует состоянию соответствующего светодиода строки
+  // upd - true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
+  void setRow(byte addr, byte row, byte value, bool upd = false)
+  {
+    if (addr >= numDevices || row > 7)
+    {
+      return;
+    }
+
+    switch (direct)
+    {
+    case 0:
+      value = (flip) ? reverseByte(value) : value;
+      break;
+    case 1:
+      value = (flip) ? reverseByte(value) : value;
+      row = 7 - row;
+      break;
+    case 2:
+      value = (flip) ? value : reverseByte(value);
+      row = 7 - row;
+      break;
+    case 3:
+      value = (flip) ? value : reverseByte(value);
+      break;
+    }
+    (((direct) >> (0)) & 0x01) ? _setColumn(addr, row, value, upd)
+                               : _setRow(addr, row, value, upd);
+  }
+
+  // установить столбец устройства с учетом нужного поворота и отражения изображения
+  // addr - индекс устройства в каскаде, начиная с нуля
+  // column - столбец (координата X)
+  // value - битовая маска, в которой каждый бит соотвествует состоянию соответствующего светодиода столбца
+  // upd - true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
+  void setColumn(byte addr, byte column, byte value, bool upd = false)
+  {
+    if (addr >= numDevices || column > 7)
+    {
+      return;
+    }
+
+    switch (direct)
+    {
+    case 0:
+      column = (flip) ? 7 - column : column;
+      break;
+    case 1:
+      column = (flip) ? 7 - column : column;
+      value = reverseByte(value);
+      break;
+    case 2:
+      column = (flip) ? column : 7 - column;
+      value = reverseByte(value);
+      break;
+    case 3:
+      column = (flip) ? column : 7 - column;
+      break;
+    }
+    (((direct) >> (0)) & 0x01) ? _setRow(addr, column, value, upd)
+                               : _setColumn(addr, column, value, upd);
+  }
+
+  // обновить все устройства
+  void update()
+  {
+    for (byte addr = 0; addr < numDevices; addr++)
+    {
+      _update(addr);
+    }
+  }
+};

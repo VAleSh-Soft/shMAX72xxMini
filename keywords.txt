@@ -1,0 +1,31 @@
+#######################################
+# Syntax Coloring Map For shMAX72xxMini
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+shMAX72xxMini	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2) 
+#######################################
+
+shutdownDevice	KEYWORD2
+shutdownAllDevices	KEYWORD2
+setDirection	KEYWORD2
+setFlip	KEYWORD2
+getDeviceCount	KEYWORD2
+setScanLimit	KEYWORD2
+setBrightness	KEYWORD2
+clearDevice	KEYWORD2
+clearAllDevices	KEYWORD2
+setLed	KEYWORD2
+setRow	KEYWORD2
+setColumn	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+

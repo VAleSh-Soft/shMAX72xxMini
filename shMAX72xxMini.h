@@ -20,28 +20,30 @@
 #define OP_SHUTDOWN 12    // отключение устройства; 0 - отключено, 1 - включено
 #define OP_DISPLAYTEST 15 // тест дисплея, зажигает все сегменты/светодиоды
 
+// ==== shMAX72xxMini ================================
+
 // numDevices - количество устройств в каскаде 
-template <byte numDevices>
+template <uint8_t numDevices>
 class shMAX72xxMini
 {
 private:
   // массив байт для отправки в устройства
-  byte spidata[numDevices * 2];
+  uint8_t spidata[numDevices * 2];
   // массив состояния всех светодиодов в устройствах
-  byte status[numDevices * 8];
-  byte SPI_CS;
+  uint8_t status[numDevices * 8];
+  uint8_t SPI_CS;
   bool flip = false; // отразить изображение
-  byte direct = 0;   // поворот изображения, 0-3
+  uint8_t direct = 0;   // поворот изображения, 0-3
 
   // отправка одиночной команды в устройство
-  void spiTransfer(byte addr, byte opcode, byte data)
+  void spiTransfer(uint8_t addr, uint8_t opcode, uint8_t data)
   {
-    byte offset = addr * 2;
-    byte maxbytes = numDevices * 2;
+    uint8_t offset = addr * 2;
+    uint8_t maxbytes = numDevices * 2;
 
-    for (byte i = 0; i < maxbytes; i++)
+    for (uint8_t i = 0; i < maxbytes; i++)
     {
-      spidata[i] = (byte)0;
+      spidata[i] = (uint8_t)0;
     }
     // готовим данные для отправки
     spidata[offset + 1] = opcode;
@@ -49,7 +51,7 @@ private:
 
     // отправка данных
     digitalWrite(SPI_CS, LOW);
-    for (byte i = maxbytes; i > 0; i--)
+    for (uint8_t i = maxbytes; i > 0; i--)
     {
       SPI.transfer(spidata[i - 1]);
     }
@@ -57,7 +59,7 @@ private:
   }
 
   // изменение порядка следования битов в байте
-  byte reverseByte(byte b)
+  uint8_t reverseByte(uint8_t b)
   {
     b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
@@ -66,11 +68,11 @@ private:
   }
 
   // отрисовка столбца
-  void _setColumn(byte addr, byte col, byte value, bool upd)
+  void _setColumn(uint8_t addr, uint8_t col, uint8_t value, bool upd)
   {
-    byte val;
+    uint8_t val;
 
-    for (byte row = 0; row < 8; row++)
+    for (uint8_t row = 0; row < 8; row++)
     {
       val = value >> (7 - row);
       val = val & 0x01;
@@ -79,9 +81,9 @@ private:
   }
 
   // отрисовка строки
-  void _setRow(byte addr, byte row, byte value, bool upd)
+  void _setRow(uint8_t addr, uint8_t row, uint8_t value, bool upd)
   {
-    byte offset = addr * 8;
+    uint8_t offset = addr * 8;
     status[offset + row] = value;
     if (upd)
     {
@@ -90,10 +92,10 @@ private:
   }
 
   // отрисовка одиночного светодиода
-  void _setLed(byte addr, byte row, byte column, boolean state, bool upd)
+  void _setLed(uint8_t addr, uint8_t row, uint8_t column, boolean state, bool upd)
   {
-    byte offset = addr * 8;
-    byte val = 0x00;
+    uint8_t offset = addr * 8;
+    uint8_t val = 0x00;
 
     val = B10000000 >> column;
     if (state)
@@ -112,10 +114,10 @@ private:
   }
 
   // обновление; возможно обновление как только буфера, так и изображения на матрице; возможно одновременное стирание буфера (и матрицы, соответсвенно)
-  void _update(byte addr, bool clear = false, bool transfer = true)
+  void _update(uint8_t addr, bool clear = false, bool transfer = true)
   {
-    byte offset = addr * 8;
-    for (byte i = 0; i < 8; i++)
+    uint8_t offset = addr * 8;
+    for (uint8_t i = 0; i < 8; i++)
     {
       if (clear)
       {
@@ -134,13 +136,13 @@ public:
   // CLK    - к пину D13
   // CS     - к пину csPin (обычно это пин D10)
   // numDevices - количество устройств в каскаде
-  shMAX72xxMini(byte csPin)
+  shMAX72xxMini(uint8_t csPin)
   {
     SPI_CS = csPin;
     pinMode(SPI_CS, OUTPUT);
     digitalWrite(SPI_CS, HIGH);
     SPI.begin();
-    for (byte i = 0; i < numDevices; i++)
+    for (uint8_t i = 0; i < numDevices; i++)
     {
       spiTransfer(i, OP_DISPLAYTEST, 0);
       spiTransfer(i, OP_SCANLIMIT, 7);
@@ -153,7 +155,7 @@ public:
   // отключить или включить устройство
   // addr - индекс устройства в каскаде, начиная с нуля
   // off_device - true - отключить устройство, false - включить устройство
-  void shutdownDevice(byte addr, bool off_device)
+  void shutdownDevice(uint8_t addr, bool off_device)
   {
     if (addr >= numDevices)
     {
@@ -167,7 +169,7 @@ public:
   // off_device - true - отключить устройства, false - включить устройства
   void shutdownAllDevices(bool off_device)
   {
-    for (byte addr = 0; addr < numDevices; addr++)
+    for (uint8_t addr = 0; addr < numDevices; addr++)
     {
       spiTransfer(addr, OP_SHUTDOWN, !off_device);
     }
@@ -175,19 +177,19 @@ public:
 
   // установить угол поворота изображения на всех устройствах
   // dir - угол поворота изображения, 0-3
-  void setDirection(byte dir) { direct = dir % 4; }
+  void setDirection(uint8_t dir) { direct = dir % 4; }
 
   // включить отражение изображения по горизонтали (по строкам) на всех устройствах
   // toFlip - true - включить отражение false - отключить отражение
   void setFlip(bool toFlip) { flip = toFlip; }
 
   // получить количество устройств в каскаде
-  byte getDeviceCount() { return (numDevices); }
+  uint8_t getDeviceCount() { return (numDevices); }
 
   // установить количество строк для обработки устройством
   // addr - индекс устройства в каскаде, начиная с нуля
   // limit - количество строк, 1-8
-  void setScanLimit(byte addr, byte limit)
+  void setScanLimit(uint8_t addr, uint8_t limit)
   {
     if (addr >= numDevices)
     {
@@ -201,7 +203,7 @@ public:
   // установить яркость свечения светодиодов устройства
   // addr - индекс устройства в каскаде, начиная с нуля
   // intensity - яркость свечения, 0-15 (при значении 0 светодиоды не гаснут)
-  void setBrightness(byte addr, byte intensity)
+  void setBrightness(uint8_t addr, uint8_t intensity)
   {
     if (addr >= numDevices)
     {
@@ -215,7 +217,7 @@ public:
   // очистить устройство
   // addr - индекс устройства в каскаде, начиная с нуля
   // upd - true - обновить изображение сразу, иначе очистится только буфер устройства, изображение будет обновлено только после вызова метода update
-  void clearDevice(byte addr, bool upd = false)
+  void clearDevice(uint8_t addr, bool upd = false)
   {
     if (addr >= numDevices)
     {
@@ -229,7 +231,7 @@ public:
   // upd - true - обновить изображение сразу, иначе очистится только буфер устройств, изображение будет обновлено только после вызова метода update
   void clearAllDevices(bool upd = false)
   {
-    for (byte addr = 0; addr < numDevices; addr++)
+    for (uint8_t addr = 0; addr < numDevices; addr++)
     {
       _update(addr, true, upd);
     }
@@ -241,15 +243,15 @@ public:
   // column - столбец (координата X)
   // state - устанавливаемое состояние светодиода
   // upd - true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
-  void setLed(byte addr, byte row, byte column, boolean state, bool upd = false)
+  void setLed(uint8_t addr, uint8_t row, uint8_t column, boolean state, bool upd = false)
   {
     if (addr >= numDevices || row > 7 || column > 7)
     {
       return;
     }
 
-    byte a = row;
-    byte b = column;
+    uint8_t a = row;
+    uint8_t b = column;
     switch (direct)
     {
     case 0:
@@ -276,7 +278,7 @@ public:
   // row - строка (координата Y)
   // value - битовая маска, в которой каждый бит соотвествует состоянию соответствующего светодиода строки
   // upd - true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
-  void setRow(byte addr, byte row, byte value, bool upd = false)
+  void setRow(uint8_t addr, uint8_t row, uint8_t value, bool upd = false)
   {
     if (addr >= numDevices || row > 7)
     {
@@ -309,7 +311,7 @@ public:
   // column - столбец (координата X)
   // value - битовая маска, в которой каждый бит соотвествует состоянию соответствующего светодиода столбца
   // upd - true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
-  void setColumn(byte addr, byte column, byte value, bool upd = false)
+  void setColumn(uint8_t addr, uint8_t column, uint8_t value, bool upd = false)
   {
     if (addr >= numDevices || column > 7)
     {
@@ -340,7 +342,7 @@ public:
   // обновить все устройства
   void update()
   {
-    for (byte addr = 0; addr < numDevices; addr++)
+    for (uint8_t addr = 0; addr < numDevices; addr++)
     {
       _update(addr);
     }

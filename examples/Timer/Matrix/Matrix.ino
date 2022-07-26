@@ -6,7 +6,7 @@
 shMAX72xxMini<4> disp(CS_PIN);
 
 // цифры 6x8
-const byte font_digit[] = {
+const uint8_t font_digit[] = {
     0x7E, 0x85, 0x89, 0x91, 0xA1, 0x7E, // 0
     0x00, 0x00, 0x41, 0xFF, 0x01, 0x00, // 1
     0x43, 0x85, 0x89, 0x89, 0x89, 0x73, // 2
@@ -24,9 +24,9 @@ const byte font_digit[] = {
 // addr - индекс устройства в модуле
 // offset - смещение цифры от края устройства
 // index - выводимая цифра
-void writeChar(byte addr, byte offset, byte index)
+void writeChar(uint8_t addr, uint8_t offset, uint8_t index)
 {
-  for (byte i = 0; i < 6; i++)
+  for (uint8_t i = 0; i < 6; i++)
   {
     disp.setColumn(addr, i + offset, font_digit[index * 6 + i]);
   }
@@ -34,7 +34,7 @@ void writeChar(byte addr, byte offset, byte index)
 
 void setup()
 { // включаем и настраиваем все устройства модуля
-  for (byte d = 0; d < disp.getDeviceCount(); d++)
+  for (uint8_t d = 0; d < disp.getDeviceCount(); d++)
   {
     disp.shutdownDevice(d, false);
     disp.setBrightness(d, 8);
@@ -50,8 +50,8 @@ void loop()
   {
     // если время еще не закончилось, вывести его на экран
     disp.clearAllDevices();
-    byte min = secondCount / 60;
-    byte sec = secondCount % 60;
+    uint8_t min = secondCount / 60;
+    uint8_t sec = secondCount % 60;
     // вывести минуты
     writeChar(0, 1, min / 10);
     writeChar(1, 0, min % 10);
@@ -65,7 +65,7 @@ void loop()
   else
   {
     // если время закончилось, трижды мигнуть экраном и запустить все заново
-    for (byte i = 0; i < 6; i++)
+    for (uint8_t i = 0; i < 6; i++)
     {
       disp.shutdownAllDevices(i % 2 == 0);
       delay(300);

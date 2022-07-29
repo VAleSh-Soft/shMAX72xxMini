@@ -1,9 +1,10 @@
 #include <shMAX72xxMini.h>
 
 #define CS_PIN 10
+#define NUM_DEVICES 4
 
 // инициируем модуль из четырех устройств, вывод CS модуля подулючен к пину D10 Ардуино
-shMAX72xxMini<4> disp(CS_PIN);
+shMAX72xxMini<CS_PIN, NUM_DEVICES> disp;
 
 // цифры 6x8
 const uint8_t font_digit[] = {
@@ -60,6 +61,7 @@ void loop()
     writeChar(3, 0, sec % 10);
     // отрисовать двоеточие
     disp.setColumn(1, 7, 0b00100100);
+    
     disp.update();
   }
   else

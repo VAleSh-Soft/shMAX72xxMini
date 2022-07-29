@@ -1,17 +1,18 @@
 #include <shMAX72xxMini.h>
 
 #define CS_PIN 10
+#define NUM_DEVICES 4
 
 // инициируем модуль из четырех устройств, вывод CS модуля подулючен к пину D10 Ардуино
-shMAX72xxMini<4> disp(CS_PIN);
+shMAX72xxMini<CS_PIN, NUM_DEVICES> disp;
 
 // битовая маска выводимого изображения (по столбцам)
 uint8_t data[] = {
-    0b00010010,
-    0b00100100,
-    0b11111000,
-    0b10100100,
-    0b00010010};
+    0b00010010,     
+    0b00100100,     
+    0b11111000,     
+    0b10100100,  
+    0b00010010};   
 
 void setup()
 {

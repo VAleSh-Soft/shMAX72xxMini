@@ -22,8 +22,8 @@
 
 // ==== shMAX72xxMini ================================
 
-// numDevices - количество устройств в каскаде 
-template <uint8_t numDevices>
+// numDevices - количество устройств в каскаде
+template <uint8_t csPin, uint8_t numDevices>
 class shMAX72xxMini
 {
 private:
@@ -31,9 +31,8 @@ private:
   uint8_t spidata[numDevices * 2];
   // массив состояния всех светодиодов в устройствах
   uint8_t status[numDevices * 8];
-  uint8_t SPI_CS;
-  bool flip = false; // отразить изображение
-  uint8_t direct = 0;   // поворот изображения, 0-3
+  bool flip = false;  // отразить изображение
+  uint8_t direct = 0; // поворот изображения, 0-3
 
   // отправка одиночной команды в устройство
   void spiTransfer(uint8_t addr, uint8_t opcode, uint8_t data)
@@ -43,19 +42,19 @@ private:
 
     for (uint8_t i = 0; i < maxbytes; i++)
     {
-      spidata[i] = (uint8_t)0;
+      spidata[i] = 0x00;
     }
     // готовим данные для отправки
     spidata[offset + 1] = opcode;
     spidata[offset] = data;
 
     // отправка данных
-    digitalWrite(SPI_CS, LOW);
+    digitalWrite(csPin, LOW);
     for (uint8_t i = maxbytes; i > 0; i--)
     {
       SPI.transfer(spidata[i - 1]);
     }
-    digitalWrite(SPI_CS, HIGH);
+    digitalWrite(csPin, HIGH);
   }
 
   // изменение порядка следования битов в байте
@@ -136,11 +135,10 @@ public:
   // CLK    - к пину D13
   // CS     - к пину csPin (обычно это пин D10)
   // numDevices - количество устройств в каскаде
-  shMAX72xxMini(uint8_t csPin)
+  shMAX72xxMini()
   {
-    SPI_CS = csPin;
-    pinMode(SPI_CS, OUTPUT);
-    digitalWrite(SPI_CS, HIGH);
+    pinMode(csPin, OUTPUT);
+    digitalWrite(csPin, HIGH);
     SPI.begin();
     for (uint8_t i = 0; i < numDevices; i++)
     {
@@ -346,5 +344,67 @@ public:
     {
       _update(addr);
     }
+  }
+};
+
+// ==== shMAX72xx7Segment ============================
+
+//      A
+//     ---
+//  F |   | B
+//     -G-
+//  E |   | C
+//     --- *
+//      D  X
+const uint8_t PROGMEM digitToSegment[] = {
+    // XABCDEFG
+    0b01111110, // 0
+    0b00110000, // 1
+    0b01101101, // 2
+    0b01111001, // 3
+    0b00110011, // 4
+    0b01011011, // 5
+    0b01011111, // 6
+    0b01110000, // 7
+    0b01111111, // 8
+    0b01111011, // 9
+    0b01110111, // A
+    0b00011111, // b
+    0b01001110, // C
+    0b00111101, // d
+    0b01001111, // E
+    0b01000111  // F
+};
+
+const uint8_t minusSegments = 0b00000001;
+
+template <uint8_t csPin, uint8_t numDevices, uint8_t numDigits>
+class shMAX72xx7Segment : public shMAX72xxMini<csPin, numDevices>
+{
+private:
+public:
+  shMAX72xx7Segment() : shMAX72xxMini<csPin, numDevices>() {}
+
+  uint8_t encodeDigit(uint8_t digit)
+  {
+    return ((digit < 16) ? pgm_read_byte(&digitToSegment[digit]) : 0x00);
+  }
+
+  uint8_t getNumDigits() { return (numDigits); }
+
+  void setChar(uint8_t index, uint8_t value, bool showDot = false, bool upd = false)
+  {
+    if (index >= numDigits)
+    {
+      return;
+    }
+
+    uint8_t addr = index / 8;
+    index -= addr * 8;
+    if (showDot)
+    {
+      value |= 0b10000000;
+    }
+    shMAX72xxMini<csPin, numDevices>::setRow(addr, index, value, upd);
   }
 };

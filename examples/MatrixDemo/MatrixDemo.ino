@@ -1,9 +1,10 @@
 #include <shMAX72xxMini.h>
 
 #define CS_PIN 10
+#define NUM_DEVICES 4
 
 // инициируем модуль из четырех устройств, вывод CS модуля подулючен к пину D10 Ардуино
-shMAX72xxMini<4> disp(CS_PIN);
+shMAX72xxMini<CS_PIN, NUM_DEVICES> disp;
 
 uint32_t delay_time = 20;
 

@@ -2,9 +2,9 @@
 
 #define CS_PIN 10
 #define NUM_DEVICES 1
-#define NUM_DIGITS 4
+#define NUM_DIGITS 8
 
-// инициируем модуль из одного устройства и четырех цифр, вывод CS модуля подулючен к пину D10 Ардуино
+// инициируем модуль из одного устройства и четырех цифр, вывод CS модуля подулючен к пину D10 Ардуино, выводы DIN и CLK модуля подключены к пинам D11 и D13 Ардуино соответственно
 shMAX72xx7Segment<CS_PIN, NUM_DEVICES, NUM_DIGITS> disp;
 
 void setup()
@@ -24,11 +24,11 @@ void loop()
     byte min = secondCount / 60;
     byte sec = secondCount % 60;
     // вывести минуты
-    disp.setChar(0, disp.encodeDigit(min / 10));
-    disp.setChar(1, disp.encodeDigit(min % 10), true);
+    disp.setChar(7, disp.encodeDigit(min / 10));
+    disp.setChar(6, disp.encodeDigit(min % 10), true);
     // вывести секунды
-    disp.setChar(2, disp.encodeDigit(sec / 10));
-    disp.setChar(3, disp.encodeDigit(sec % 10));
+    disp.setChar(5, disp.encodeDigit(sec / 10));
+    disp.setChar(4, disp.encodeDigit(sec % 10));
 
     disp.update();
   }

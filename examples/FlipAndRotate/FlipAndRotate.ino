@@ -19,7 +19,6 @@ void setup()
   // включаем и настраиваем все устройства модуля
   for (uint8_t d = 0; d < disp.getDeviceCount(); d++)
   {
-    disp.shutdownDevice(d, false);
     disp.setBrightness(d, 8);
   }
 }

@@ -24,8 +24,8 @@
 
 /**
  * @brief конструктор объекта
- * 
- * @tparam csPin номер пина для подключения вывода CS 
+ *
+ * @tparam csPin номер пина для подключения вывода CS
  * @tparam numDevices количество устройств в каскаде
  */
 template <uint8_t csPin, uint8_t numDevices>
@@ -117,6 +117,14 @@ private:
     }
   }
 
+  bool _getLedState(uint8_t addr, uint8_t row, uint8_t column)
+  {
+    uint8_t offset = addr * 8;
+    bool result = result = (column < 8) ? (((status[offset + row]) >> (column)) & 0x01)
+                                        : false;
+    return (result);
+  }
+
   // обновление; возможно обновление как только буфера, так и изображения на матрице; возможно одновременное стирание буфера (и матрицы, соответсвенно)
   void _update(uint8_t addr, bool clear = false, bool transfer = true)
   {
@@ -150,7 +158,8 @@ public:
       spiTransfer(i, OP_DISPLAYTEST, 0);
       spiTransfer(i, OP_SCANLIMIT, 7);
       spiTransfer(i, OP_DECODEMODE, 0);
-      spiTransfer(i, OP_SHUTDOWN, 0);
+      spiTransfer(i, OP_INTENSITY, 0);
+      spiTransfer(i, OP_SHUTDOWN, 1);
       clearDevice(i, true);
     }
   }
@@ -309,6 +318,47 @@ public:
   }
 
   /**
+   * @brief получение состояние одиночного светодиода устройства с учетом нужного поворота и отражения изображения
+   *
+   * @param addr индекс устройства в каскаде, начиная с нуля
+   * @param row строка (координата Y)
+   * @param column столбец (координата X)
+   * @return true, если светодиод включен
+   */
+  bool getLedStat(uint8_t addr, uint8_t row, uint8_t column)
+  {
+    bool result = false;
+    if (addr >= numDevices || row > 7 || column > 7)
+    {
+      return (result);
+    }
+
+    uint8_t a = row;
+    uint8_t b = column;
+
+    switch (direct)
+    {
+    case 0:
+      column = (flip) ? b : 7 - b;
+      break;
+    case 1:
+      column = a;
+      row = (flip) ? 7 - b : b;
+      break;
+    case 2:
+      column = (flip) ? 7 - b : b;
+      row = 7 - a;
+      break;
+    case 3:
+      column = 7 - a;
+      row = (flip) ? b : 7 - b;
+      break;
+    }
+
+    return (_getLedState(addr, row, column));
+  }
+
+  /**
    * @brief установить строку устройства с учетом нужного поворота и отражения изображения
    *
    * @param addr индекс устройства в каскаде, начиная с нуля
@@ -345,6 +395,53 @@ public:
   }
 
   /**
+   * @brief получение битовой маски строки из буфера устройства
+   *
+   * @param addr индекс устройства в каскаде, начиная с нуля
+   * @param row строка (координата Y)
+   * @return результат
+   */
+  uint8_t getRow(uint8_t addr, uint8_t row)
+  {
+    uint8_t result = 0x00;
+
+    if (addr >= numDevices || row > 7)
+    {
+      return (result);
+    }
+
+    for (uint8_t i = 0; i < 8; i++)
+    {
+      uint8_t col = i;
+      switch (direct)
+      {
+      case 0:
+        (_getLedState(addr, row, (flip) ? 7 - col : col)) ? (result) |= (1UL << (i))
+                                                          : (result) &= ~(1UL << (i));
+        break;
+      case 1:
+        (_getLedState(addr, (flip) ? col : 7 - col, row)) ? (result) |= (1UL << (i))
+                                                          : (result) &= ~(1UL << (i));
+        break;
+      case 2:
+        (_getLedState(addr, 7 - row, (flip) ? 7 - col : col)) ? (result) |= (1UL << (i))
+                                                              : (result) &= ~(1UL << (i));
+        break;
+      case 3:
+        (_getLedState(addr, (flip) ? col : 7 - col, 7 - row)) ? (result) |= (1UL << (i))
+                                                              : (result) &= ~(1UL << (i));
+        break;
+      }
+    }
+    if (direct > 1)
+    {
+      result = reverseByte(result);
+    }
+
+    return (result);
+  }
+
+  /**
    * @brief установить столбец устройства с учетом нужного поворота и отражения изображения
    *
    * @param addr индекс устройства в каскаде, начиная с нуля
@@ -378,6 +475,65 @@ public:
     }
     (((direct) >> (0)) & 0x01) ? _setRow(addr, column, value, upd)
                                : _setColumn(addr, column, value, upd);
+  }
+
+  /**
+   * @brief получение битовой маски столбца из буфера устройства
+   *
+   * @param addr индекс устройства в каскаде, начиная с нуля
+   * @param column столбец (координата X)
+   * @return результат
+   */
+  uint8_t getColumn(uint8_t addr, uint8_t column)
+  {
+    uint8_t result = 0x00;
+
+    if (addr >= numDevices || column > 7)
+    {
+      return (result);
+    }
+
+    for (uint8_t i = 0; i < 8; i++)
+    {
+      uint8_t row = i;
+      switch (direct)
+      {
+      case 0:
+        column = (flip) ? column
+                        : ((i == 0) ? 7 - column : column);
+        break;
+      case 1:
+        column = (flip) ? ((i == 0) ? 7 - column : column)
+                        : column;
+        row = 7 - row;
+        break;
+      case 2:
+        column = (flip) ? ((i == 0) ? 7 - column : column)
+                        : column;
+        break;
+      case 3:
+        column = (flip) ? column
+                        : ((i == 0) ? 7 - column : column) /*?*/;
+        break;
+      }
+      if (direct == 0 || direct == 2)
+      {
+        (_getLedState(addr, row, column)) ? (result) |= (1UL << (i))
+                                          : (result) &= ~(1UL << (i));
+      }
+      else
+      {
+        (_getLedState(addr, column, row)) ? (result) |= (1UL << (i))
+                                          : (result) &= ~(1UL << (i));
+      }
+    }
+
+    if (direct == 0)
+    {
+      result = reverseByte(result);
+    }
+
+    return (result);
   }
 
   /**
@@ -426,8 +582,8 @@ const uint8_t minusSegments = 0b00000001;
 
 /**
  * @brief конструктор объекта
- * 
- * @tparam csPin номер пина для подключения вывода CS 
+ *
+ * @tparam csPin номер пина для подключения вывода CS
  * @tparam numDevices количество устройств в каскаде
  * @tparam numDigits количество знаков в каскаде (обычно по 8 на каждом устройстве)
  */
@@ -438,32 +594,32 @@ private:
 public:
   shMAX72xx7Segment() : shMAX72xxMini<csPin, numDevices>() {}
 
-/**
- * @brief получение битовой маски числа для вывода на индикатор
- * 
- * @param digit число (0..15)
- * @return uint8_t 
- */
+  /**
+   * @brief получение битовой маски числа для вывода на индикатор
+   *
+   * @param digit число (0..15)
+   * @return uint8_t
+   */
   uint8_t encodeDigit(uint8_t digit)
   {
     return ((digit < 16) ? pgm_read_byte(&digitToSegment[digit]) : 0x00);
   }
 
-/**
- * @brief получение количества знаков в каскаде
- * 
- * @return uint8_t 
- */
+  /**
+   * @brief получение количества знаков в каскаде
+   *
+   * @return uint8_t
+   */
   uint8_t getNumDigits() { return (numDigits); }
 
-/**
- * @brief вывод символа на индикатор
- * 
- * @param index индекс индикатора в каскаде, начиная с нуля
- * @param value битовая маска выводимого символа
- * @param showDot показывать или нет десятичную точку
- * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
- */
+  /**
+   * @brief вывод символа на индикатор
+   *
+   * @param index индекс индикатора в каскаде, начиная с нуля
+   * @param value битовая маска выводимого символа
+   * @param showDot показывать или нет десятичную точку
+   * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
+   */
   void setChar(uint8_t index, uint8_t value, bool showDot = false, bool upd = false)
   {
     if (index >= numDigits)

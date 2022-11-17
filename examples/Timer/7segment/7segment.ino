@@ -9,8 +9,6 @@ shMAX72xx7Segment<CS_PIN, NUM_DEVICES, NUM_DIGITS> disp;
 
 void setup()
 {
-  // включаем и настраиваем все устройства модуля
-  disp.shutdownAllDevices(false);
   disp.setBrightness(0, 8);
 }
 

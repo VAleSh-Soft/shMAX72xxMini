@@ -23,8 +23,11 @@ setBrightness	KEYWORD2
 clearDevice	KEYWORD2
 clearAllDevices	KEYWORD2
 setLed	KEYWORD2
+getLed	KEYWORD2
 setRow	KEYWORD2
+getRow	KEYWORD2
 setColumn	KEYWORD2
+getColumn	KEYWORD2
 encodeDigit	KEYWORD2
 getNumDigits	KEYWORD2
 setChar	KEYWORD2

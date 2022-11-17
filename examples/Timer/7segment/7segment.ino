@@ -1,3 +1,16 @@
+/**
+ * @file Matrix.ino
+ * @author Vladimir Shatalov (valesh-soft@yandex.ru)
+ * @brief
+ * @version 1.0
+ * @date 17.11.2022
+ *
+ * @copyright Copyright (c) 2022
+ *
+ * Пример создания таймера с выводом информации на семисегментный индикатор
+ *
+ */
+
 #include <shMAX72xxMini.h>
 
 #define CS_PIN 10
@@ -29,6 +42,8 @@ void loop()
     disp.setChar(4, disp.encodeDigit(sec % 10));
 
     disp.update();
+
+    secondCount--;
   }
   else
   {
@@ -38,8 +53,7 @@ void loop()
       disp.shutdownAllDevices(i % 2 == 0);
       delay(300);
     }
-    secondCount = 121;
+    secondCount = 120;
   }
-  secondCount--;
   delay(1000);
 }

@@ -1,3 +1,17 @@
+/**
+ * @file MatrixDemo.ino
+ * @author Vladimir Shatalov (valesh-soft@yandex.ru)
+ * @brief 
+ * @version 1.0
+ * @date 17.11.2022
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ * Пример, демонстрирующий вывод информации на матрицу из четырех устройств: вывод текста,
+ * заполнение матрицы по столбцам, построчно и попиксельно
+ * 
+ */
+
 #include <shMAX72xxMini.h>
 
 #define CS_PIN 10
@@ -77,7 +91,6 @@ void single()
 
 void setup()
 {
-  // включаем и настраиваем все устройства модуля
   for (uint8_t d = 0; d < disp.getDeviceCount(); d++)
   {
     disp.setBrightness(d, 8);

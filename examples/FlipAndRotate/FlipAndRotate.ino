@@ -1,3 +1,16 @@
+/**
+ * @file FlipAndRotate.ino
+ * @author Vladimir Shatalov (valesh-soft@yandex.ru)
+ * @brief 
+ * @version 1.0
+ * @date 17.11.2022
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ * Пример, демонстрирующий поворот изображения и отражение его по горизонтали;
+ * 
+ */
+
 #include <shMAX72xxMini.h>
 
 #define CS_PIN 10
@@ -16,7 +29,6 @@ uint8_t data[] = {
 
 void setup()
 {
-  // включаем и настраиваем все устройства модуля
   for (uint8_t d = 0; d < disp.getDeviceCount(); d++)
   {
     disp.setBrightness(d, 8);

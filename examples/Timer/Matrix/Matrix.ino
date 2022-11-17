@@ -1,3 +1,16 @@
+/**
+ * @file Matrix.ino
+ * @author Vladimir Shatalov (valesh-soft@yandex.ru)
+ * @brief
+ * @version 1.0
+ * @date 17.11.2022
+ *
+ * @copyright Copyright (c) 2022
+ *
+ * Пример создания таймера с выводом информации на матрицу из четырех устройств
+ *
+ */
+
 #include <shMAX72xxMini.h>
 
 #define CS_PIN 10
@@ -22,14 +35,13 @@ const uint8_t font_digit[] = {
 };
 
 // отображение символа на устройстве
-// addr - индекс устройства в модуле
-// offset - смещение цифры от края устройства
+// offset - смещение цифры от края матрицы
 // index - выводимая цифра
-void writeChar(uint8_t addr, uint8_t offset, uint8_t index)
+void writeChar(uint8_t offset, uint8_t index)
 {
   for (uint8_t i = 0; i < 6; i++)
   {
-    disp.setColumn(addr, i + offset, font_digit[index * 6 + i]);
+    disp.setColumn(offset / 8, offset % 8 + i, font_digit[index * 6 + i]);
   }
 }
 
@@ -53,15 +65,17 @@ void loop()
     uint8_t min = secondCount / 60;
     uint8_t sec = secondCount % 60;
     // вывести минуты
-    writeChar(0, 1, min / 10);
-    writeChar(1, 0, min % 10);
+    writeChar(1, min / 10);
+    writeChar(8, min % 10);
     // вывести секунды
-    writeChar(2, 1, sec / 10);
-    writeChar(3, 0, sec % 10);
+    writeChar(17, sec / 10);
+    writeChar(24, sec % 10);
     // отрисовать двоеточие
     disp.setColumn(1, 7, 0b00100100);
-    
+
     disp.update();
+
+    secondCount--;
   }
   else
   {
@@ -71,8 +85,7 @@ void loop()
       disp.shutdownAllDevices(i % 2 == 0);
       delay(300);
     }
-    secondCount = 121;
+    secondCount = 120;
   }
-  secondCount--;
   delay(1000);
 }

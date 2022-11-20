@@ -91,10 +91,7 @@ void single()
 
 void setup()
 {
-  for (uint8_t d = 0; d < disp.getDeviceCount(); d++)
-  {
-    disp.setBrightness(d, 8);
-  }
+  disp.setBrightnessForAllDevices(8);
   disp.setDirection(2); // установите нужный угол поворота
   // disp.setFlip(true);   // если нужно включить отражение изображения, раскомментируйте строку
 }

@@ -250,6 +250,20 @@ public:
   }
 
   /**
+   * @brief установить яркость свечения светодиодов для всех устройств
+   *
+   * @param intensity яркость свечения, 0-15 (при значении 0 светодиоды не гаснут)
+   */
+  void setBrightnessForAllDevices(uint8_t intensity)
+  {
+    intensity = (intensity <= 15) ? intensity : 15;
+    for (uint8_t addr = 0; addr < numDevices; addr++)
+    {
+      spiTransfer(addr, OP_INTENSITY, intensity);
+    }
+  }
+
+  /**
    * @brief очистить устройство
    *
    * @param addr индекс устройства в каскаде, начиная с нуля

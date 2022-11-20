@@ -20,6 +20,7 @@ setFlip	KEYWORD2
 getDeviceCount	KEYWORD2
 setScanLimit	KEYWORD2
 setBrightness	KEYWORD2
+setBrightnessForAllDevices	KEYWORD2
 clearDevice	KEYWORD2
 clearAllDevices	KEYWORD2
 setLed	KEYWORD2

@@ -29,10 +29,7 @@ uint8_t data[] = {
 
 void setup()
 {
-  for (uint8_t d = 0; d < disp.getDeviceCount(); d++)
-  {
-    disp.setBrightness(d, 8);
-  }
+  disp.setBrightnessForAllDevices(8);
 }
 
 void loop()

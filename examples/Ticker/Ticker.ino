@@ -27,7 +27,7 @@ shMAX72xxMini<CS_PIN, NUM_DEVICES> disp;
 char ticker_string[] = "0123456789 - english string: Hellow! русская строка: Привет!";
 
 uint8_t *data = NULL;    // буфер для вывода на экран
-uint16_t data_count = 0; // размер буфера; равен количеству символов в строке, умноженному на 6 (LETTER_WIDTH + CHARACTER_SPASING) плюс количество столбцов на матрице (NUM_DEVICES * 8)
+uint16_t data_count = 0; // размер буфера; равен количеству символов в строке, умноженному на 6 (LETTER_WIDTH + CHARACTER_SPASING) плюс количество столбцов на матрице (NUM_DEVICES * 8), чтобы новый проход строки начинался только после завершения предыдущего прохода
 
 void setData()
 {
@@ -72,7 +72,7 @@ void setData()
     // заполнение битовой маски символа в буфере
     for (uint8_t j = 0; j < LETTER_WIDTH; j++)
     {
-      data[n + j + NUM_DEVICES * 8] = pgm_read_byte(&font_5_7[chr * LETTER_WIDTH + j]);
+      data[n + j] = pgm_read_byte(&font_5_7[chr * LETTER_WIDTH + j]);
     }
     n += LETTER_WIDTH + CHARACTER_SPACING;
   }
@@ -84,18 +84,18 @@ void setup()
   disp.setDirection(2); // установите нужный угол поворота
   // disp.setFlip(true);   // если нужно включить отражение изображения, раскомментируйте строку
 
-  // определение размера буфера
+  // определение размера буфера; 60 - количество символов в строке, включая пробелы и знаки препинания
   data_count = 60 * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
   // выделение памяти под буфер
   data = (uint8_t *)calloc(data_count, sizeof(uint8_t));
-  // заполнение буфера битовыми масками символов; 60 - количество символов в строке
+  // заполнение буфера битовыми масками символов
   setData();
 }
 
 void loop()
 {
   static uint32_t timer = 0;
-  static uint16_t n = 31;
+  static uint16_t n = 1;
 
   if (millis() - timer >= 1000 / TICKER_FPS)
   {
@@ -103,19 +103,16 @@ void loop()
 
     // вывод очередного кадра
     disp.clearAllDevices();
-    for (uint8_t i = 0; i < NUM_DEVICES * 8; i++)
+    for (uint16_t i = NUM_DEVICES * 8, j = n; i > 0 && j > 0; i--, j--)
     {
-      if ((n + i) < data_count)
-      {
-        disp.setColumn(i / 8, i % 8, reverseByte(data[n + i]));
-      }
+      disp.setColumn((i - 1) / 8, (i - 1) % 8, reverseByte(data[j - 1]));
     }
     disp.update();
 
     // сдвиг позиции на один столбец для следующего кадра
-    if (++n >= data_count)
+    if (++n > data_count)
     {
-      n = 0;
+      n = 1;
     }
   }
 }

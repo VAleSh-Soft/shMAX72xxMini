@@ -1,3 +1,15 @@
+/**
+ * @file font.h
+ * @author Vladimir Shatalov (valesh-soft@yandex.ru)
+ * @brief 
+ * @version 1.0
+ * @date 20.11.2022
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ * Русифицированный шрифт 5х7
+ * 
+ */
 #pragma once
 
 #include <avr/pgmspace.h>

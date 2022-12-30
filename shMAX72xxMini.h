@@ -26,7 +26,7 @@
  * @brief конструктор объекта
  *
  * @tparam csPin номер пина для подключения вывода CS
- * @tparam numDevices количество устройств в каскаде
+ * @tparam numDevices количество устройств в каскаде (1..127)
  */
 template <uint8_t csPin, uint8_t numDevices>
 class shMAX72xxMini
@@ -143,7 +143,7 @@ private:
   }
 
 public:
-  // Подключение устройства к Ардуино:
+  // Подключение устройства к Ардуино Uno/Nano/Pro mini:
   // DataIn - к пину D11
   // CLK    - к пину D13
   // CS     - к пину csPin (обычно это пин D10)

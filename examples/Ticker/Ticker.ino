@@ -88,8 +88,11 @@ void setup()
   data_count = 60 * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
   // выделение памяти под буфер
   data = (uint8_t *)calloc(data_count, sizeof(uint8_t));
-  // заполнение буфера битовыми масками символов
-  setData();
+  // если память выделена успешно, заполнение буфера битовыми масками символов
+  if (data)
+  {
+    setData();
+  }
 }
 
 void loop()

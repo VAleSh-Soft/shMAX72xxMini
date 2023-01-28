@@ -89,7 +89,7 @@ void setup()
   // выделение памяти под буфер
   data = (uint8_t *)calloc(data_count, sizeof(uint8_t));
   // если память выделена успешно, заполнение буфера битовыми масками символов
-  if (data)
+  if (data != NULL)
   {
     setData();
   }

@@ -601,7 +601,7 @@ const uint8_t minusSegments = 0b00000001;
  * @tparam numDevices количество устройств в каскаде
  * @tparam numDigits количество знаков в каскаде (обычно по 8 на каждом устройстве)
  */
-template <uint8_t csPin, uint8_t numDevices, uint8_t numDigits>
+template <uint8_t csPin, uint8_t numDevices, uint16_t numDigits>
 class shMAX72xx7Segment : public shMAX72xxMini<csPin, numDevices>
 {
 private:
@@ -624,7 +624,7 @@ public:
    *
    * @return uint8_t
    */
-  uint8_t getNumDigits() { return (numDigits); }
+  uint16_t getNumDigits() { return (numDigits); }
 
   /**
    * @brief вывод символа на индикатор
@@ -634,7 +634,7 @@ public:
    * @param showDot показывать или нет десятичную точку
    * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
    */
-  void setChar(uint8_t index, uint8_t value, bool showDot = false, bool upd = false)
+  void setChar(uint16_t index, uint8_t value, bool showDot = false, bool upd = false)
   {
     if (index >= numDigits)
     {
@@ -642,11 +642,11 @@ public:
     }
 
     uint8_t addr = index / 8;
-    index -= addr * 8;
+    uint8_t idx = index % 8;
     if (showDot)
     {
       value |= 0b10000000;
     }
-    shMAX72xxMini<csPin, numDevices>::setRow(addr, index, value, upd);
+    shMAX72xxMini<csPin, numDevices>::setRow(addr, idx, value, upd);
   }
 };

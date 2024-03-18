@@ -120,7 +120,7 @@ private:
   bool _getLedState(uint8_t addr, uint8_t row, uint8_t column)
   {
     uint8_t offset = addr * 8;
-    bool result = result = (column < 8) ? (((status[offset + row]) >> (column)) & 0x01)
+    bool result = (column < 8) ? (((status[offset + row]) >> (column)) & 0x01)
                                         : false;
     return (result);
   }
@@ -203,7 +203,7 @@ public:
   /**
    * @brief включить отражение изображения по горизонтали (по строкам) на всех устройствах
    *
-   * @param toFlip true - включить отражение false - отключить отражение
+   * @param toFlip true - включить отражение, false - отключить отражение
    */
   void setFlip(bool toFlip) { flip = toFlip; }
 

@@ -1,6 +1,10 @@
 #pragma once
 
+#if defined(ARDUINO_ARCH_ESP32)
+#include <pgmspace.h>
+#else
 #include <avr/pgmspace.h>
+#endif
 #include <Arduino.h>
 #include <SPI.h>
 

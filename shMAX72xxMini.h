@@ -1,6 +1,10 @@
 #pragma once
 
+#if defined(ARDUINO_ARCH_ESP32)
+#include <pgmspace.h>
+#else
 #include <avr/pgmspace.h>
+#endif
 #include <Arduino.h>
 #include <SPI.h>
 
@@ -22,6 +26,8 @@
 
 // ==== shMAX72xxMini ================================
 
+  SPISettings spi_settings(1000000ul, MSBFIRST, SPI_MODE0);
+
 /**
  * @brief конструктор объекта
  *
@@ -39,13 +45,27 @@ private:
   bool flip = false;  // отразить изображение
   uint8_t direct = 0; // поворот изображения, 0-3
 
-  // отправка одиночной команды в устройство
+  // отправка данных через SPI
+  void transfer_data()
+  {
+    SPI.beginTransaction(spi_settings);
+
+    digitalWrite(csPin, LOW);
+    for (uint8_t i = numDevices * 2; i > 0; i--)
+    {
+      SPI.transfer(spidata[i - 1]);
+    }
+    digitalWrite(csPin, HIGH);
+
+    SPI.endTransaction();
+  }
+
+  // отправка команды по конкретному адресу
   void spiTransfer(uint8_t addr, uint8_t opcode, uint8_t data)
   {
     uint8_t offset = addr * 2;
-    uint8_t maxbytes = numDevices * 2;
 
-    for (uint8_t i = 0; i < maxbytes; i++)
+    for (uint8_t i = 0; i < numDevices * 2; i++)
     {
       spidata[i] = 0x00;
     }
@@ -54,12 +74,21 @@ private:
     spidata[offset] = data;
 
     // отправка данных
-    digitalWrite(csPin, LOW);
-    for (uint8_t i = maxbytes; i > 0; i--)
+    transfer_data();
+  }
+
+  // отправка команды на все устройства
+  void spiTransfer(uint8_t opcode, uint8_t data)
+  {
+    // готовим данные для отправки
+    for (uint8_t i = 0; i < numDevices * 2; i++)
     {
-      SPI.transfer(spidata[i - 1]);
+      // четный байт - данные, нечетный байт - опкод
+      spidata[i] = ((i >> 0) & 0x01) ? opcode : data;
     }
-    digitalWrite(csPin, HIGH);
+
+    // отправка данных
+    transfer_data();
   }
 
   // изменение порядка следования битов в байте
@@ -121,7 +150,7 @@ private:
   {
     uint8_t offset = addr * 8;
     bool result = (column < 8) ? (((status[offset + row]) >> (column)) & 0x01)
-                                        : false;
+                               : false;
     return (result);
   }
 
@@ -153,15 +182,26 @@ public:
     pinMode(csPin, OUTPUT);
     digitalWrite(csPin, HIGH);
     SPI.begin();
-    for (uint8_t i = 0; i < numDevices; i++)
-    {
-      spiTransfer(i, OP_DISPLAYTEST, 0);
-      spiTransfer(i, OP_SCANLIMIT, 7);
-      spiTransfer(i, OP_DECODEMODE, 0);
-      spiTransfer(i, OP_INTENSITY, 0);
-      spiTransfer(i, OP_SHUTDOWN, 1);
-      clearDevice(i, true);
-    }
+
+    spiTransfer(OP_DISPLAYTEST, 0);
+    spiTransfer(OP_SCANLIMIT, 7);
+    spiTransfer(OP_DECODEMODE, 0);
+    spiTransfer(OP_INTENSITY, 0);
+    spiTransfer(OP_SHUTDOWN, 1);
+
+    clearDevice(true);
+  }
+
+  /**
+   * @brief настройка параметров SPI
+   *
+   * @param clock частота синхронизации SPI, Гц
+   * @param bitOrder порядок следования бит; возможные варианты - MSBFIRST и LSBFIRST
+   * @param dataMode режим работы интерфейса; возможные варианты - SPI_MODE0, SPI_MODE1, SPI_MODE2, SPI_MODE3
+   */
+  void setSPISettings(uint32_t clock, uint8_t bitOrder, uint8_t dataMode)
+  {
+    spi_settings = SPISettings(clock, bitOrder, dataMode);
   }
 
   /**
@@ -187,10 +227,7 @@ public:
    */
   void shutdownAllDevices(bool off_device)
   {
-    for (uint8_t addr = 0; addr < numDevices; addr++)
-    {
-      spiTransfer(addr, OP_SHUTDOWN, !off_device);
-    }
+    spiTransfer(OP_SHUTDOWN, !off_device);
   }
 
   /**
@@ -257,10 +294,7 @@ public:
   void setBrightnessForAllDevices(uint8_t intensity)
   {
     intensity = (intensity <= 15) ? intensity : 15;
-    for (uint8_t addr = 0; addr < numDevices; addr++)
-    {
-      spiTransfer(addr, OP_INTENSITY, intensity);
-    }
+    spiTransfer(OP_INTENSITY, intensity);
   }
 
   /**

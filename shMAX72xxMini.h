@@ -26,7 +26,7 @@
 
 // ==== shMAX72xxMini ================================
 
-  SPISettings spi_settings(1000000ul, MSBFIRST, SPI_MODE0);
+SPISettings spi_settings(1000000ul, MSBFIRST, SPI_MODE0);
 
 /**
  * @brief конструктор объекта
@@ -177,7 +177,9 @@ public:
   // CLK    - к пину D13
   // CS     - к пину csPin (обычно это пин D10)
   // numDevices - количество устройств в каскаде
-  shMAX72xxMini()
+  shMAX72xxMini() {}
+
+  void init()
   {
     pinMode(csPin, OUTPUT);
     digitalWrite(csPin, HIGH);

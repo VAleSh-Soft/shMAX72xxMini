@@ -13,10 +13,12 @@ shMAX72xx7Segment	KEYWORD1
 # Methods and Functions (KEYWORD2) 
 #######################################
 
+init	KEYWORD2
 shutdownDevice	KEYWORD2
 shutdownAllDevices	KEYWORD2
 setDirection	KEYWORD2
 setFlip	KEYWORD2
+setSPISettings	KEYWORD2
 getDeviceCount	KEYWORD2
 setScanLimit	KEYWORD2
 setBrightness	KEYWORD2

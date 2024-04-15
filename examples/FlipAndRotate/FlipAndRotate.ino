@@ -2,8 +2,8 @@
  * @file FlipAndRotate.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
  * @brief 
- * @version 1.0
- * @date 17.11.2022
+ * @version 1.4
+ * @date 15.04.2024
  * 
  * @copyright Copyright (c) 2022
  * 
@@ -29,6 +29,8 @@ uint8_t data[] = {
 
 void setup()
 {
+  // инициализация матрицы
+  disp.init();
   disp.setBrightnessForAllDevices(8);
 }
 

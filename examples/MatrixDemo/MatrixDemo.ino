@@ -2,8 +2,8 @@
  * @file MatrixDemo.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
  * @brief 
- * @version 1.0
- * @date 17.11.2022
+ * @version 1.4
+ * @date 15.04.2024
  * 
  * @copyright Copyright (c) 2022
  * 
@@ -91,6 +91,8 @@ void single()
 
 void setup()
 {
+  // инициализация матрицы
+  disp.init();
   disp.setBrightnessForAllDevices(8);
   disp.setDirection(2); // установите нужный угол поворота
   // disp.setFlip(true);   // если нужно включить отражение изображения, раскомментируйте строку

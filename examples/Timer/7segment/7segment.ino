@@ -2,8 +2,8 @@
  * @file Matrix.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
  * @brief
- * @version 1.0
- * @date 17.11.2022
+ * @version 1.4
+ * @date 15.04.2024
  *
  * @copyright Copyright (c) 2022
  *
@@ -22,6 +22,8 @@ shMAX72xx7Segment<CS_PIN, NUM_DEVICES, NUM_DIGITS> disp;
 
 void setup()
 {
+  // инициализация драйвера
+  disp.init();
   disp.setBrightness(0, 8);
 }
 

@@ -109,7 +109,11 @@ private:
     {
       val = value >> (7 - row);
       val = val & 0x01;
-      _setLed(addr, row, col, val, upd);
+      _setLed(addr, row, col, val, false);
+    }
+    if (upd)
+    {
+      _update(addr);
     }
   }
 
@@ -154,7 +158,7 @@ private:
     return (result);
   }
 
-  // обновление; возможно обновление как только буфера, так и изображения на матрице; возможно одновременное стирание буфера (и матрицы, соответсвенно)
+  // обновление одного устройства; возможно обновление как только буфера, так и изображения на матрице; при этом возможно стирание буфера (и матрицы, соответсвенно)
   void _update(uint8_t addr, bool clear = false, bool transfer = true)
   {
     uint8_t offset = addr * 8;

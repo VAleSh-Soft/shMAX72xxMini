@@ -12,7 +12,11 @@
  */
 #pragma once
 
+#if defined(ARDUINO_ARCH_ESP32)
+#include <pgmspace.h>
+#else
 #include <avr/pgmspace.h>
+#endif
 
 // шрифт 5х7
 static const uint8_t PROGMEM font_5_7[] = {

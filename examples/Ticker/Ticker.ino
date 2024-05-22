@@ -12,7 +12,11 @@
 
 #include "font.h"
 #include <shMAX72xxMini.h>
+#if defined(ARDUINO_ARCH_ESP32)
+#include <pgmspace.h>
+#else
 #include <avr/pgmspace.h>
+#endif
 
 #define CS_PIN 10
 #define NUM_DEVICES 4
@@ -29,11 +33,32 @@ char ticker_string[] = "0123456789 - english string: Hellow! русская ст
 uint8_t *data = NULL;    // буфер для вывода на экран
 uint16_t data_count = 0; // размер буфера; равен количеству символов в строке, умноженному на 6 (LETTER_WIDTH + CHARACTER_SPASING) плюс количество столбцов на матрице (NUM_DEVICES * 8), чтобы новый проход строки начинался только после завершения предыдущего прохода
 
+// определение количества символов в строке; подсчет символов делается с учетом кириллицы (два байта на символ)
+uint16_t getLengthOfString(char *_str)
+{
+  uint16_t result = 0;
+  for (uint16_t i = 0; i < UINT16_MAX; i++)
+  {
+    // считаем до первого нулевого символа, не учитывая служебные байты
+    if (_str[i] > 0 && (int)_str[i] < 0xc0)
+    {
+      result++;
+    }
+    else if (_str[i] == 0)
+    {
+      break;
+    }
+  }
+
+  return (result);
+}
+
+// заполнение буфера экрана
 void setData()
 {
   uint16_t i = 0;
   uint16_t n = 0;
-  while (ticker_string[i] != NULL)
+  while (ticker_string[i] != 0)
   {
     uint8_t chr = (int)ticker_string[i];
     // перекодировка кириллицы из UTF8 в Win-1521 при необходимости
@@ -86,8 +111,8 @@ void setup()
   disp.setDirection(2); // установите нужный угол поворота
   // disp.setFlip(true);   // если нужно включить отражение изображения, раскомментируйте строку
 
-  // определение размера буфера; 60 - количество символов в строке, включая пробелы и знаки препинания
-  data_count = 60 * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
+  // определение размера буфера;
+  data_count = getLengthOfString(ticker_string) * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
   // выделение памяти под буфер
   data = (uint8_t *)calloc(data_count, sizeof(uint8_t));
   // если память выделена успешно, заполнение буфера битовыми масками символов

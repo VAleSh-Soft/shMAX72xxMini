@@ -1,5 +1,23 @@
 #pragma once
 
+// ===================================================
+
+// флаг доступности второго и более интерфейса SPI
+#if defined(ARDUINO_ARCH_RP2040)
+#define SPI1_AVAILABLE 1
+#else
+#define SPI1_AVAILABLE 0
+#endif
+
+// флаг доступности переназначения пинов SPI
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#define CUSTOM_SPI_PINS_AVAILABLE 1
+#else
+#define CUSTOM_SPI_PINS_AVAILABLE 0
+#endif
+
+// ===================================================
+
 #if defined(ARDUINO_ARCH_ESP32)
 #include <pgmspace.h>
 #else
@@ -52,16 +70,8 @@ private:
   uint8_t direct = 0;      // поворот изображения, 0-3
   shSPIClass *_spi = &SPI; // SPI интерфейс для вывода данных
 
-  // первоначальная настройка матрицы
-  void _init();
-
   // первоначальная инициализация и запуск
-  void start();
-
-#if defined(ARDUINO_ARCH_ESP32)
-  // первоначальная инициализация и запуск для esp32
-  void start(int8_t clk_pin, int8_t din_pin);
-#endif
+  void start(int8_t clk_pin = -1, int8_t din_pin = -1);
 
   // отправка данных через SPI
   void transfer_data();
@@ -97,14 +107,14 @@ public:
   // numDevices - количество устройств в каскаде
   shMAX72xxMini() {}
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if CUSTOM_SPI_PINS_AVAILABLE
   /**
    * @brief инициализация устройства
    *
    * @param clk_pin пин для подключения CLK
    * @param din_pin пин для подключения DIN (DataIn)
    */
-  void init(int8_t clk_pin = -1, int8_t din_pin = -1);
+  void init(int8_t clk_pin, int8_t din_pin);
 #endif
 
   /**
@@ -113,7 +123,7 @@ public:
    */
   void init();
 
-#if defined(ARDUINO_ARCH_RP2040)
+#if SPI1_AVAILABLE
   void setSPI(shSPIClass *spi);
 #endif
 
@@ -269,8 +279,18 @@ public:
 // ---- private ---------------------------------
 
 template <uint8_t csPin, uint8_t numDevices>
-void shMAX72xxMini<csPin, numDevices>::_init()
+void shMAX72xxMini<csPin, numDevices>::start(int8_t clk_pin, int8_t din_pin)
 {
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+#if defined(ARDUINO_ARCH_ESP32)
+  clk_pin = (clk_pin < 0) ? SCK : clk_pin;
+  din_pin - (din_pin < 0) ? MOSI : din_pin;
+  _spi->begin(clk_pin, MISO, din_pin, SS);
+#else
+  _spi->begin();
+#endif
+
   spiTransfer(OP_DISPLAYTEST, 0);
   spiTransfer(OP_SCANLIMIT, 7);
   spiTransfer(OP_DECODEMODE, 0);
@@ -279,29 +299,6 @@ void shMAX72xxMini<csPin, numDevices>::_init()
 
   clearAllDevices(true);
 }
-
-template <uint8_t csPin, uint8_t numDevices>
-void shMAX72xxMini<csPin, numDevices>::start()
-{
-  pinMode(csPin, OUTPUT);
-  digitalWrite(csPin, HIGH);
-  _spi->begin();
-
-  _init();
-}
-
-#if defined(ARDUINO_ARCH_ESP32)
-// первоначальная инициализация и запуск для esp32
-template <uint8_t csPin, uint8_t numDevices>
-void shMAX72xxMini<csPin, numDevices>::start(int8_t clk_pin, int8_t din_pin)
-{
-  pinMode(csPin, OUTPUT);
-  digitalWrite(csPin, HIGH);
-  _spi->begin(clk_pin, din_pin);
-
-  _init();
-}
-#endif
 
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::transfer_data()
@@ -453,7 +450,7 @@ void shMAX72xxMini<csPin, numDevices>::_update(uint8_t addr,
 
 // ---- public ----------------------------------
 
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if CUSTOM_SPI_PINS_AVAILABLE
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::init(int8_t clk_pin, int8_t din_pin)
 {
@@ -467,8 +464,7 @@ void shMAX72xxMini<csPin, numDevices>::init(int8_t clk_pin, int8_t din_pin)
     _spi->setTX(din_pin);
   }
 #endif
-
-  start();
+  start(clk_pin, din_pin);
 }
 #endif
 
@@ -478,7 +474,7 @@ void shMAX72xxMini<csPin, numDevices>::init()
   start();
 }
 
-#if defined(ARDUINO_ARCH_RP2040)
+#if SPI1_AVAILABLE
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::setSPI(shSPIClass *spi)
 {

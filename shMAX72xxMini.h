@@ -28,6 +28,12 @@ SPISettings spi_settings(1000000ul, MSBFIRST, SPI_MODE0);
 
 // ==== shMAX72xxMini ================================
 
+#if defined(ARDUINO_ARCH_RP2040)
+typedef SPIClassRP2040 shSPIClass;
+#else
+typedef SPIClass shSPIClass;
+#endif
+
 /**
  * @brief конструктор объекта
  *
@@ -42,8 +48,20 @@ private:
   uint8_t spidata[numDevices * 2];
   // массив состояния всех светодиодов в устройствах
   uint8_t status[numDevices * 8];
-  bool flip = false;  // отразить изображение
-  uint8_t direct = 0; // поворот изображения, 0-3
+  bool flip = false;       // отразить изображение
+  uint8_t direct = 0;      // поворот изображения, 0-3
+  shSPIClass *_spi = &SPI; // SPI интерфейс для вывода данных
+
+  // первоначальная настройка матрицы
+  void _init();
+
+  // первоначальная инициализация и запуск
+  void start();
+
+#if defined(ARDUINO_ARCH_ESP32)
+  // первоначальная инициализация и запуск для esp32
+  void start(int8_t clk_pin, int8_t din_pin);
+#endif
 
   // отправка данных через SPI
   void transfer_data();
@@ -79,11 +97,25 @@ public:
   // numDevices - количество устройств в каскаде
   shMAX72xxMini() {}
 
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+  /**
+   * @brief инициализация устройства
+   *
+   * @param clk_pin пин для подключения CLK
+   * @param din_pin пин для подключения DIN (DataIn)
+   */
+  void init(int8_t clk_pin = -1, int8_t din_pin = -1);
+#endif
+
   /**
    * @brief инициализация устройства
    *
    */
   void init();
+
+#if defined(ARDUINO_ARCH_RP2040)
+  void setSPI(shSPIClass *spi);
+#endif
 
   /**
    * @brief настройка параметров SPI
@@ -237,18 +269,53 @@ public:
 // ---- private ---------------------------------
 
 template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::_init()
+{
+  spiTransfer(OP_DISPLAYTEST, 0);
+  spiTransfer(OP_SCANLIMIT, 7);
+  spiTransfer(OP_DECODEMODE, 0);
+  spiTransfer(OP_INTENSITY, 0);
+  spiTransfer(OP_SHUTDOWN, 1);
+
+  clearAllDevices(true);
+}
+
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::start()
+{
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+  _spi->begin();
+
+  _init();
+}
+
+#if defined(ARDUINO_ARCH_ESP32)
+// первоначальная инициализация и запуск для esp32
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::start(int8_t clk_pin, int8_t din_pin)
+{
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+  _spi->begin(clk_pin, din_pin);
+
+  _init();
+}
+#endif
+
+template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::transfer_data()
 {
-  SPI.beginTransaction(spi_settings);
+  _spi->beginTransaction(spi_settings);
 
   digitalWrite(csPin, LOW);
   for (uint8_t i = numDevices * 2; i > 0; i--)
   {
-    SPI.transfer(spidata[i - 1]);
+    _spi->transfer(spidata[i - 1]);
   }
   digitalWrite(csPin, HIGH);
 
-  SPI.endTransaction();
+  _spi->endTransaction();
 }
 
 template <uint8_t csPin, uint8_t numDevices>
@@ -386,21 +453,41 @@ void shMAX72xxMini<csPin, numDevices>::_update(uint8_t addr,
 
 // ---- public ----------------------------------
 
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::init(int8_t clk_pin, int8_t din_pin)
+{
+#if defined(ARDUINO_ARCH_RP2040)
+  if (clk_pin >= 0)
+  {
+    _spi->setSCK(clk_pin);
+  }
+  if (din_pin >= 0)
+  {
+    _spi->setTX(din_pin);
+  }
+#endif
+
+  start();
+}
+#endif
+
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::init()
 {
-  pinMode(csPin, OUTPUT);
-  digitalWrite(csPin, HIGH);
-  SPI.begin();
-
-  spiTransfer(OP_DISPLAYTEST, 0);
-  spiTransfer(OP_SCANLIMIT, 7);
-  spiTransfer(OP_DECODEMODE, 0);
-  spiTransfer(OP_INTENSITY, 0);
-  spiTransfer(OP_SHUTDOWN, 1);
-
-  clearDevice(true);
+  start();
 }
+
+#if defined(ARDUINO_ARCH_RP2040)
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::setSPI(shSPIClass *spi)
+{
+  if (spi != NULL)
+  {
+    _spi = spi;
+  }
+}
+#endif
 
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::setSPISettings(uint32_t clock,

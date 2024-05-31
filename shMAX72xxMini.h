@@ -2,15 +2,25 @@
 
 // ===================================================
 
+// флаг использования МК ATmega 48PB/88PB/168PB/328PB, имеющими на борту два
+// интерфейса SPI
+#if defined(MINICORE) && (defined(__AVR_ATmega48PB__) || defined(__AVR_ATmega88PB__) || \
+                          defined(__AVR_ATmega168PB__) || defined(__AVR_ATmega328PB__))
+#define AVR_ATMEGA_PB 1
+#else
+#define AVR_ATMEGA_PB 0
+#endif
+
 // флаг доступности второго и более интерфейса SPI
-#if defined(ARDUINO_ARCH_RP2040)
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
 #define SPI1_AVAILABLE 1
 #else
 #define SPI1_AVAILABLE 0
 #endif
 
 // флаг доступности переназначения пинов SPI
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32) || \
+    defined(ARDUINO_ARCH_ESP8266)
 #define CUSTOM_SPI_PINS_AVAILABLE 1
 #else
 #define CUSTOM_SPI_PINS_AVAILABLE 0
@@ -70,8 +80,14 @@ private:
   uint8_t direct = 0;      // поворот изображения, 0-3
   shSPIClass *_spi = &SPI; // SPI интерфейс для вывода данных
 
-  // первоначальная инициализация и запуск
-  void start(int8_t clk_pin = -1, int8_t din_pin = -1);
+  // первоначальная инициализация матрицы
+  void _init();
+
+  // первоначальная инициализация SPI
+  void start();
+#if defined(ARDUINO_ARCH_ESP32)
+  void start(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin);
+#endif
 
   // отправка данных через SPI
   void transfer_data();
@@ -111,10 +127,11 @@ public:
   /**
    * @brief инициализация устройства
    *
-   * @param clk_pin пин для подключения CLK
-   * @param din_pin пин для подключения DIN (DataIn)
+   * @param sck_pin пин для подключения CLK
+   * @param mosi_pin пин для подключения DIN (DataIn)
+   * @param miso_pin пин MISO для текущего интерфейса
    */
-  void init(int8_t clk_pin, int8_t din_pin);
+  void init(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin = -1);
 #endif
 
   /**
@@ -279,18 +296,8 @@ public:
 // ---- private ---------------------------------
 
 template <uint8_t csPin, uint8_t numDevices>
-void shMAX72xxMini<csPin, numDevices>::start(int8_t clk_pin, int8_t din_pin)
+void shMAX72xxMini<csPin, numDevices>::_init()
 {
-  pinMode(csPin, OUTPUT);
-  digitalWrite(csPin, HIGH);
-#if defined(ARDUINO_ARCH_ESP32)
-  clk_pin = (clk_pin < 0) ? SCK : clk_pin;
-  din_pin - (din_pin < 0) ? MOSI : din_pin;
-  _spi->begin(clk_pin, MISO, din_pin, SS);
-#else
-  _spi->begin();
-#endif
-
   spiTransfer(OP_DISPLAYTEST, 0);
   spiTransfer(OP_SCANLIMIT, 7);
   spiTransfer(OP_DECODEMODE, 0);
@@ -299,6 +306,33 @@ void shMAX72xxMini<csPin, numDevices>::start(int8_t clk_pin, int8_t din_pin)
 
   clearAllDevices(true);
 }
+
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::start()
+{
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+  _spi->begin();
+
+  _init();
+}
+
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::start(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin)
+{
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+#if defined(ARDUINO_ARCH_ESP32)
+  _spi->begin(sck_pin, miso_pin, mosi_pin, csPin);
+#else
+  _spi->pins(sck_pin, miso_pin, mosi_pin, csPin);
+  _spi->begin();
+#endif
+
+  _init();
+}
+#endif
 
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::transfer_data()
@@ -452,19 +486,18 @@ void shMAX72xxMini<csPin, numDevices>::_update(uint8_t addr,
 
 #if CUSTOM_SPI_PINS_AVAILABLE
 template <uint8_t csPin, uint8_t numDevices>
-void shMAX72xxMini<csPin, numDevices>::init(int8_t clk_pin, int8_t din_pin)
+void shMAX72xxMini<csPin, numDevices>::init(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin)
 {
 #if defined(ARDUINO_ARCH_RP2040)
-  if (clk_pin >= 0)
-  {
-    _spi->setSCK(clk_pin);
-  }
-  if (din_pin >= 0)
-  {
-    _spi->setTX(din_pin);
-  }
+  _spi->setSCK(sck_pin);
+  _spi->setTX(mosi_pin);
 #endif
-  start(clk_pin, din_pin);
+
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+  start(sck_pin, mosi_pin, miso_pin);
+#else
+  start();
+#endif
 }
 #endif
 

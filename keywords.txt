@@ -14,6 +14,7 @@ shMAX72xx7Segment	KEYWORD1
 #######################################
 
 init	KEYWORD2
+setSPI	KEYWORD2
 shutdownDevice	KEYWORD2
 shutdownAllDevices	KEYWORD2
 setDirection	KEYWORD2

@@ -33,6 +33,35 @@ char ticker_string[] = "0123456789 - english string: Hellow! русская ст
 uint8_t *data = NULL;    // буфер для вывода на экран
 uint16_t data_count = 0; // размер буфера; равен количеству символов в строке, умноженному на 6 (LETTER_WIDTH + CHARACTER_SPASING) плюс количество столбцов на матрице (NUM_DEVICES * 8), чтобы новый проход строки начинался только после завершения предыдущего прохода
 
+// определение количества символов в строке; подсчет символов делается с учетом кириллицы (два байта на символ)
+uint16_t getLengthOfString(char *_str)
+{
+  uint16_t result = 0;
+  for (uint16_t i = 0; i < UINT16_MAX; i++)
+  {
+    // считаем до первого нулевого символа, не учитывая служебные байты
+    if ((uint8_t)_str[i] > 0)
+    {
+      // символы латиницы считаем без сомнения ))
+      if ((uint8_t)_str[i] < 0xc0)
+      {
+        result++;
+      }
+      // иначе, если первый байт служебный - пропускаем его
+      else if ((uint8_t)_str[i] != 0xd0 && (uint8_t)_str[i] != 0xd1)
+      {
+        result++;
+      }
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  return (result);
+}
+
 // заполнение буфера экрана
 void setData()
 {
@@ -40,7 +69,7 @@ void setData()
   uint16_t n = 0;
   while (ticker_string[i] != 0)
   {
-    uint8_t chr = (int)ticker_string[i];
+    uint8_t chr = (uint8_t)ticker_string[i];
     // перекодировка кириллицы из UTF8 в Win-1521 при необходимости
     if (chr >= 0xC0)
     {
@@ -48,7 +77,7 @@ void setData()
       {
       case 0xD0:
         i++;
-        chr = (int)ticker_string[i];
+        chr = (uint8_t)ticker_string[i];
         if (chr == 0x81)
         {
           chr = 0xA8;
@@ -60,7 +89,7 @@ void setData()
         break;
       case 0xD1:
         i++;
-        chr = (int)ticker_string[i];
+        chr = (uint8_t)ticker_string[i];
         if (chr == 0x91)
         {
           chr = 0xB8;
@@ -92,7 +121,7 @@ void setup()
   // disp.setFlip(true);   // если нужно включить отражение изображения, раскомментируйте строку
 
   // определение размера буфера; длина строки - 60 символов, включая пробелы и знаки препинания;
-  data_count = 60 * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
+  data_count = getLengthOfString(ticker_string) * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
   // выделение памяти под буфер
   data = (uint8_t *)calloc(data_count, sizeof(uint8_t));
   // если память выделена успешно, заполнение буфера битовыми масками символов

@@ -1,21 +1,21 @@
 /**
  * @file TwoTickerForESP32.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
- * 
+ *
  * @brief Пример одновременного использования двух SPI-интерфейсов для
- *        независимого вывода данных на каждый; 
- * 
- *        Скетч написан для использования на esp32; используемый для 
+ *        независимого вывода данных на каждый;
+ *
+ *        Скетч написан для использования на esp32; используемый для
  *        этого аддон см. в файле readme.md
- * 
- *        В примере используется одновременный вывод бегущих строк на 
+ *
+ *        В примере используется одновременный вывод бегущих строк на
  *        две матрицы из четырех модулей каждая;
- * 
+ *
  * @version 1.0
  * @date 01.06.2024
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include "font.h"
@@ -48,7 +48,6 @@ shMAX72xxMini<CS1_PIN, NUM_DEVICES> second_display;
 SPIClass _vspi(VSPI);
 SPIClass _hspi(HSPI);
 
-
 // строки для вывода на экран
 char first_string[] = "VSPI - first SPI interface; первый SPI-интерфейс";
 char second_string[] = "HSPI - second SPI interface; второй SPI-интерфейс";
@@ -74,17 +73,24 @@ uint16_t getLengthOfString(char *_str)
   for (uint16_t i = 0; i < UINT16_MAX; i++)
   {
     // считаем до первого нулевого символа, не учитывая служебные байты
-    if (_str[i] > 0 && (int)_str[i] < 0xc0)
+    if ((uint8_t)_str[i] > 0)
     {
-      result++;
+      // символы латиницы считаем без сомнения ))
+      if ((uint8_t)_str[i] < 0xc0)
+      {
+        result++;
+      }
+      // иначе, если первый байт служебный - пропускаем его
+      else if ((uint8_t)_str[i] != 0xd0 && (uint8_t)_str[i] != 0xd1)
+      {
+        result++;
+      }
     }
-    else if (_str[i] == 0)
+    else
     {
       break;
     }
   }
-
-  return (result);
 }
 
 // заполнение буфера экрана данными
@@ -94,7 +100,7 @@ void setData(char *_str, uint8_t *_data)
   uint16_t n = 0;
   while (_str[i] != 0)
   {
-    uint8_t chr = (int)_str[i];
+    uint8_t chr = (uint8_t)_str[i];
     // перекодировка кириллицы из UTF8 в Win-1521 при необходимости
     if (chr >= 0xC0)
     {
@@ -102,7 +108,7 @@ void setData(char *_str, uint8_t *_data)
       {
       case 0xD0:
         i++;
-        chr = (int)_str[i];
+        chr = (uint8_t)_str[i];
         if (chr == 0x81)
         {
           chr = 0xA8;
@@ -114,7 +120,7 @@ void setData(char *_str, uint8_t *_data)
         break;
       case 0xD1:
         i++;
-        chr = (int)_str[i];
+        chr = (uint8_t)_str[i];
         if (chr == 0x91)
         {
           chr = 0xB8;
@@ -153,7 +159,7 @@ void setup()
   {
     setData(first_string, first_data);
   }
-  
+
   second_display.setSPI(&_hspi);
   second_display.init(CLK1_PIN, DIN1_PIN, MISO1_PIN);
   second_display.setBrightnessForAllDevices(4);
@@ -192,7 +198,7 @@ void loop()
       n = 1;
     }
   }
-  
+
   static uint32_t timer1 = 0;
   static uint16_t m = 1;
 

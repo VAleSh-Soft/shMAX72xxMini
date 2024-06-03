@@ -1,14 +1,13 @@
 /**
  * @file Matrix.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
- * @brief
+ * 
+ * @brief Пример создания таймера с выводом информации на семисегментный индикатор
+ * 
  * @version 1.4
  * @date 15.04.2024
  *
  * @copyright Copyright (c) 2022
- *
- * Пример создания таймера с выводом информации на семисегментный индикатор
- *
  */
 
 #include <shMAX72xxMini.h>

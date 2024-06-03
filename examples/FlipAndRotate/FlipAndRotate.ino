@@ -1,14 +1,14 @@
 /**
  * @file FlipAndRotate.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
- * @brief 
+ * 
+ * @brief Пример, демонстрирующий поворот изображения и отражение его по 
+ *        горизонтали;
+ * 
  * @version 1.4
  * @date 15.04.2024
  * 
  * @copyright Copyright (c) 2022
- * 
- * Пример, демонстрирующий поворот изображения и отражение его по горизонтали;
- * 
  */
 
 #include <shMAX72xxMini.h>

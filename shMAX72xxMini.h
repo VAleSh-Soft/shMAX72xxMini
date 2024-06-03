@@ -2,13 +2,12 @@
 
 // ===================================================
 
-// флаг использования МК ATmega 48PB/88PB/168PB/328PB, имеющими на борту два
+// флаг использования МК ATmega 328PB, имеющим на борту два
 // интерфейса SPI
-#if defined(MINICORE) && (defined(__AVR_ATmega48PB__) || defined(__AVR_ATmega88PB__) || \
-                          defined(__AVR_ATmega168PB__) || defined(__AVR_ATmega328PB__))
-#define AVR_ATMEGA_PB 1
+#if defined(MINICORE) && defined(__AVR_ATmega328PB__)
+#define MINICORE_AVR_ATMEGA328PB 1
 #else
-#define AVR_ATMEGA_PB 0
+#define MINICORE_AVR_ATMEGA328PB 0
 #endif
 
 // флаг доступности второго и более интерфейса SPI

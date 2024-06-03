@@ -1,13 +1,13 @@
 /**
  * @file Ticker.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
- * @brief
+ * 
+ * @brief Пример вывода бегущей строки на матрицу из четырех устройств
+ * 
  * @version 1.4
  * @date 15.04.2024
  *
  * @copyright Copyright (c) 2022
- *
- * Пример вывода бегущей строки на матрицу из четырех устройств
  */
 
 #include "font.h"
@@ -32,26 +32,6 @@ char ticker_string[] = "0123456789 - english string: Hellow! русская ст
 
 uint8_t *data = NULL;    // буфер для вывода на экран
 uint16_t data_count = 0; // размер буфера; равен количеству символов в строке, умноженному на 6 (LETTER_WIDTH + CHARACTER_SPASING) плюс количество столбцов на матрице (NUM_DEVICES * 8), чтобы новый проход строки начинался только после завершения предыдущего прохода
-
-// определение количества символов в строке; подсчет символов делается с учетом кириллицы (два байта на символ)
-uint16_t getLengthOfString(char *_str)
-{
-  uint16_t result = 0;
-  for (uint16_t i = 0; i < UINT16_MAX; i++)
-  {
-    // считаем до первого нулевого символа, не учитывая служебные байты
-    if (_str[i] > 0 && (int)_str[i] < 0xc0)
-    {
-      result++;
-    }
-    else if (_str[i] == 0)
-    {
-      break;
-    }
-  }
-
-  return (result);
-}
 
 // заполнение буфера экрана
 void setData()
@@ -111,8 +91,8 @@ void setup()
   disp.setDirection(2); // установите нужный угол поворота
   // disp.setFlip(true);   // если нужно включить отражение изображения, раскомментируйте строку
 
-  // определение размера буфера;
-  data_count = getLengthOfString(ticker_string) * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
+  // определение размера буфера; длина строки - 60 символов, включая пробелы и знаки препинания;
+  data_count = 60 * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
   // выделение памяти под буфер
   data = (uint8_t *)calloc(data_count, sizeof(uint8_t));
   // если память выделена успешно, заполнение буфера битовыми масками символов

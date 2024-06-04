@@ -33,6 +33,9 @@
 #include <avr/pgmspace.h>
 #endif
 #include <Arduino.h>
+#if MINICORE_AVR_ATMEGA328PB
+#include <SPI1.h>
+#endif
 #include <SPI.h>
 
 // коды операций для MAX7221 и MAX7219
@@ -51,14 +54,19 @@
 #define OP_SHUTDOWN 12    // отключение устройства; 0 - отключено, 1 - включено
 #define OP_DISPLAYTEST 15 // тест дисплея, зажигает все сегменты/светодиоды
 
-SPISettings spi_settings(1000000ul, MSBFIRST, SPI_MODE0);
-
 // ==== shMAX72xxMini ================================
+
+#if MINICORE_AVR_ATMEGA328PB
+
+constexpr uint8_t PB_SPI0 = 0;
+constexpr uint8_t PB_SPI1 = 1;
+
+#endif
 
 #if defined(ARDUINO_ARCH_RP2040)
 typedef SPIClassRP2040 shSPIClass;
 #else
-typedef SPIClass shSPIClass;
+typedef SPI1Class shSPIClass;
 #endif
 
 /**
@@ -75,15 +83,33 @@ private:
   uint8_t spidata[numDevices * 2];
   // массив состояния всех светодиодов в устройствах
   uint8_t status[numDevices * 8];
-  bool flip = false;       // отразить изображение
-  uint8_t direct = 0;      // поворот изображения, 0-3
-  shSPIClass *_spi = &SPI; // SPI интерфейс для вывода данных
+
+  bool flip = false;  // отразить изображение
+  uint8_t direct = 0; // поворот изображения, 0-3
+
+  // SPI интерфейс для вывода данных
+#if MINICORE_AVR_ATMEGA328PB
+  SPI1Class *_spi1 = NULL;
+  SPIClass *_spi = NULL;
+  bool is_spi1 = false;
+#else
+  shSPIClass *_spi = NULL;
+#endif
+
+  // настройки SPI-интерфейса
+  uint32_t spi_clock = 1000000ul;
+  uint8_t spi_bit_order = MSBFIRST;
+  uint8_t spi_data_mode = SPI_MODE0;
 
   // первоначальная инициализация матрицы
   void _init();
 
   // первоначальная инициализация SPI
+#if MINICORE_AVR_ATMEGA328PB
+  void start(uint8_t spi);
+#else
   void start();
+#endif
 #if defined(ARDUINO_ARCH_ESP32)
   void start(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin);
 #endif
@@ -133,11 +159,24 @@ public:
   void init(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin = -1);
 #endif
 
+#if MINICORE_AVR_ATMEGA328PB
+
+  /**
+   * @brief инициализация устройства
+   *
+   * @param spi выбор интерфейса - SPI или SPI1
+   */
+  void init(uint8_t spi = PB_SPI0);
+
+#else
+
   /**
    * @brief инициализация устройства
    *
    */
   void init();
+
+#endif
 
 #if SPI1_AVAILABLE
   void setSPI(shSPIClass *spi);
@@ -306,6 +345,29 @@ void shMAX72xxMini<csPin, numDevices>::_init()
   clearAllDevices(true);
 }
 
+#if MINICORE_AVR_ATMEGA328PB
+
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::start(uint8_t spi)
+{
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+  if (spi == PB_SPI1)
+  {
+    _spi1 = &SPI1;
+    _spi1->begin();
+  }
+  else
+  {
+    _spi = &SPI;
+    _spi->begin();
+  }
+
+  _init();
+}
+
+#else
+
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::start()
 {
@@ -315,6 +377,8 @@ void shMAX72xxMini<csPin, numDevices>::start()
 
   _init();
 }
+
+#endif
 
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
 template <uint8_t csPin, uint8_t numDevices>
@@ -336,16 +400,35 @@ void shMAX72xxMini<csPin, numDevices>::start(int8_t sck_pin, int8_t mosi_pin, in
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::transfer_data()
 {
-  _spi->beginTransaction(spi_settings);
+#if MINICORE_AVR_ATMEGA328PB
+  (is_spi1) ? _spi1->beginTransaction(SPI1Settings(spi_clock,
+                                                   spi_bit_order,
+                                                   spi_data_mode))
+            : _spi->beginTransaction(SPISettings(spi_clock,
+                                                 spi_bit_order,
+                                                 spi_data_mode));
+#else
+  _spi->beginTransaction(SPISettings(spi_clock, spi_bit_order, spi_data_mode));
+#endif
 
   digitalWrite(csPin, LOW);
   for (uint8_t i = numDevices * 2; i > 0; i--)
   {
+#if MINICORE_AVR_ATMEGA328PB
+    (is_spi1) ? _spi1->transfer(spidata[i - 1])
+              : _spi->transfer(spidata[i - 1]);
+#else
     _spi->transfer(spidata[i - 1]);
+#endif
   }
   digitalWrite(csPin, HIGH);
 
+#if MINICORE_AVR_ATMEGA328PB
+  (is_spi1) ? _spi1->endTransaction()
+            : _spi->endTransaction();
+#else
   _spi->endTransaction();
+#endif
 }
 
 template <uint8_t csPin, uint8_t numDevices>
@@ -500,11 +583,24 @@ void shMAX72xxMini<csPin, numDevices>::init(int8_t sck_pin, int8_t mosi_pin, int
 }
 #endif
 
+#if MINICORE_AVR_ATMEGA328PB
+
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::init(uint8_t spi)
+{
+  is_spi1 = spi;
+  start(spi);
+}
+
+#else
+
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::init()
 {
   start();
 }
+
+#endif
 
 #if SPI1_AVAILABLE
 template <uint8_t csPin, uint8_t numDevices>
@@ -522,7 +618,9 @@ void shMAX72xxMini<csPin, numDevices>::setSPISettings(uint32_t clock,
                                                       uint8_t bitOrder,
                                                       uint8_t dataMode)
 {
-  spi_settings = SPISettings(clock, bitOrder, dataMode);
+  spi_clock = clock;
+  spi_bit_order = bitOrder;
+  spi_data_mode = dataMode;
 }
 
 template <uint8_t csPin, uint8_t numDevices>

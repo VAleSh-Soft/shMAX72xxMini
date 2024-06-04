@@ -1,21 +1,18 @@
 /**
- * @file TwoTickerForRP2040.ino
+ * @file TwoTickerForAtmega328pb.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
  *
  * @brief Пример одновременного использования двух SPI-интерфейсов для
  *        независимого вывода данных на каждый;
  *
- *        Скетч написан для использования на rp2040; используемый для
- *        этого аддон см. в файле readme.md
+ *        Скетч написан для использования на ATmega328pb с использованием
+ *        аддона MiniCore
  *
  *        В примере используется одновременный вывод бегущих строк на
  *        две матрицы из четырех модулей каждая;
  *
- *        Так же в примере показано разнесение вывода данных на разные
- *        ядра процессора;
- *
  * @version 1.0
- * @date 01.06.2024
+ * @date 04.06.2024
  *
  * @copyright Copyright (c) 2024
  *
@@ -26,14 +23,14 @@
 #include <avr/pgmspace.h>
 
 // пины для подключения первой бегущей строки
-#define CS_PIN 5
-#define CLK_PIN 6
-#define DIN_PIN 7
+#define CS_PIN 3
+#define CLK_PIN 13
+#define DIN_PIN 11
 
 // пины для подключения второй бегущей строки
-#define CS1_PIN 9
-#define CLK1_PIN 10
-#define DIN1_PIN 11
+#define CS1_PIN 4
+#define CLK1_PIN A1
+#define DIN1_PIN A7
 
 #define NUM_DEVICES 4
 
@@ -41,7 +38,7 @@
 #define CHARACTER_SPACING 1 // отступ между символами в пикселях
 #define TICKER_FPS 50       // частота смены кадров бегущей строки в секунду (fps)
 
-// инициируем два модуля из четырех устройств каждый
+// инициируем два модуля из четырех устройств
 shMAX72xxMini<CS_PIN, NUM_DEVICES> first_display;
 shMAX72xxMini<CS1_PIN, NUM_DEVICES> second_display;
 
@@ -88,6 +85,8 @@ uint16_t getLengthOfString(char *_str)
       break;
     }
   }
+
+  return (result);
 }
 
 // заполнение буфера экрана данными
@@ -142,7 +141,8 @@ void setData(char *_str, uint8_t *_data)
 
 void setup()
 {
-  first_display.init(CLK_PIN, DIN_PIN);
+  // инициализация первого SPI-интерфейса
+  first_display.init();
   first_display.setBrightnessForAllDevices(4);
   first_display.setDirection(2); // установите нужный угол поворота
 
@@ -155,12 +155,9 @@ void setup()
   {
     setData(first_string, first_data);
   }
-}
-
-void setup1()
-{
-  second_display.setSPI(&SPI1);
-  second_display.init(CLK1_PIN, DIN1_PIN);
+  
+  // инициализация второго SPI-интерфейса
+  second_display.init(PB_SPI1);
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота
 
@@ -197,10 +194,7 @@ void loop()
       n = 1;
     }
   }
-}
-
-void loop1()
-{
+  
   static uint32_t timer1 = 0;
   static uint16_t m = 1;
 

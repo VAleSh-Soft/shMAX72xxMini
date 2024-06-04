@@ -66,7 +66,7 @@ constexpr uint8_t PB_SPI1 = 1;
 #if defined(ARDUINO_ARCH_RP2040)
 typedef SPIClassRP2040 shSPIClass;
 #else
-typedef SPI1Class shSPIClass;
+typedef SPIClass shSPIClass;
 #endif
 
 /**

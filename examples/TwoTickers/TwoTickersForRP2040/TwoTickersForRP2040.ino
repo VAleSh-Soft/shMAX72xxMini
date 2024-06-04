@@ -1,15 +1,18 @@
 /**
- * @file TwoTickerForESP32.ino
+ * @file TwoTickerForRP2040.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
  *
  * @brief Пример одновременного использования двух SPI-интерфейсов для
  *        независимого вывода данных на каждый;
  *
- *        Скетч написан для использования на esp32; используемый для
+ *        Скетч написан для использования на rp2040; используемый для
  *        этого аддон см. в файле readme.md
  *
  *        В примере используется одновременный вывод бегущих строк на
  *        две матрицы из четырех модулей каждая;
+ *
+ *        Так же в примере показано разнесение вывода данных на разные
+ *        ядра процессора;
  *
  * @version 1.0
  * @date 01.06.2024
@@ -20,19 +23,17 @@
 
 #include "font.h"
 #include <shMAX72xxMini.h>
-#include <pgmspace.h>
+#include <avr/pgmspace.h>
 
 // пины для подключения первой бегущей строки
 #define CS_PIN 5
-#define CLK_PIN 18
-#define DIN_PIN 23
-#define MISO_PIN 19
+#define CLK_PIN 6
+#define DIN_PIN 7
 
 // пины для подключения второй бегущей строки
-#define CS1_PIN 15
-#define CLK1_PIN 14
-#define DIN1_PIN 13
-#define MISO1_PIN 12
+#define CS1_PIN 9
+#define CLK1_PIN 10
+#define DIN1_PIN 11
 
 #define NUM_DEVICES 4
 
@@ -40,17 +41,13 @@
 #define CHARACTER_SPACING 1 // отступ между символами в пикселях
 #define TICKER_FPS 50       // частота смены кадров бегущей строки в секунду (fps)
 
-// инициируем два модуля из четырех устройств
+// инициируем два модуля из четырех устройств каждый
 shMAX72xxMini<CS_PIN, NUM_DEVICES> first_display;
 shMAX72xxMini<CS1_PIN, NUM_DEVICES> second_display;
 
-// создаем два экземпляра SPI
-SPIClass _vspi(VSPI);
-SPIClass _hspi(HSPI);
-
 // строки для вывода на экран
-char first_string[] = "VSPI - first SPI interface; первый SPI-интерфейс";
-char second_string[] = "HSPI - second SPI interface; второй SPI-интерфейс";
+char first_string[] = "SPI - first SPI interface; первый SPI-интерфейс";
+char second_string[] = "SPI1 - second SPI interface; второй SPI-интерфейс";
 
 uint8_t *first_data = NULL;  // буфер для вывода на первый экран
 uint8_t *second_data = NULL; // буфер для вывода на второй экран
@@ -147,8 +144,7 @@ void setData(char *_str, uint8_t *_data)
 
 void setup()
 {
-  first_display.setSPI(&_vspi);
-  first_display.init(CLK_PIN, DIN_PIN, MISO_PIN);
+  first_display.init(CLK_PIN, DIN_PIN);
   first_display.setBrightnessForAllDevices(4);
   first_display.setDirection(2); // установите нужный угол поворота
 
@@ -161,9 +157,12 @@ void setup()
   {
     setData(first_string, first_data);
   }
+}
 
-  second_display.setSPI(&_hspi);
-  second_display.init(CLK1_PIN, DIN1_PIN, MISO1_PIN);
+void setup1()
+{
+  second_display.setSPI(&SPI1);
+  second_display.init(CLK1_PIN, DIN1_PIN);
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота
 
@@ -200,7 +199,10 @@ void loop()
       n = 1;
     }
   }
+}
 
+void loop1()
+{
   static uint32_t timer1 = 0;
   static uint16_t m = 1;
 

@@ -69,7 +69,7 @@ uint16_t getLengthOfString(char *_str)
     // считаем до первого нулевого символа, не учитывая служебные байты
     if ((uint8_t)_str[i] > 0)
     {
-      // символы латиницы считаем без сомнения ))
+      // символы не кириллицы считаем в любом случае
       if ((uint8_t)_str[i] < 0xc0)
       {
         result++;
@@ -157,7 +157,7 @@ void setup()
   }
   
   // инициализация второго SPI-интерфейса
-  second_display.init(PB_SPI1);
+  second_display.init(SPI_SPI1);
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота
 

@@ -1,21 +1,18 @@
 /**
- * @file TwoTickerForRP2040.ino
+ * @file TwoTickersForSTM32_BluePill.ino
  * @author Vladimir Shatalov (valesh-soft@yandex.ru)
  *
  * @brief Пример одновременного использования двух SPI-интерфейсов для
  *        независимого вывода данных на каждый;
  *
- *        Скетч написан для использования на rp2040; используемый для
- *        этого аддон см. в файле readme.md
+ *        Скетч написан для использования на STM32 Blue Pill; используемые для
+ *        этого аддоны см. в файле readme.md
  *
  *        В примере используется одновременный вывод бегущих строк на
  *        две матрицы из четырех модулей каждая;
  *
- *        Так же в примере показано разнесение вывода данных на разные
- *        ядра процессора;
- *
  * @version 1.0
- * @date 01.06.2024
+ * @date 08.06.2024
  *
  * @copyright Copyright (c) 2024
  *
@@ -26,14 +23,16 @@
 #include <avr/pgmspace.h>
 
 // пины для подключения первой бегущей строки
-#define CS_PIN 5
-#define CLK_PIN 6
-#define DIN_PIN 7
+#define CS1_PIN PA4
+#define CLK1_PIN PA5
+#define DIN1_PIN PA7
+#define MISO1_PIN PA6
 
 // пины для подключения второй бегущей строки
-#define CS1_PIN 9
-#define CLK1_PIN 10
-#define DIN1_PIN 11
+#define CS2_PIN PB12
+#define CLK2_PIN PB13
+#define DIN2_PIN PB15
+#define MISO2_PIN PB14
 
 #define NUM_DEVICES 4
 
@@ -41,13 +40,28 @@
 #define CHARACTER_SPACING 1 // отступ между символами в пикселях
 #define TICKER_FPS 50       // частота смены кадров бегущей строки в секунду (fps)
 
-// инициируем два модуля из четырех устройств каждый
-shMAX72xxMini<CS_PIN, NUM_DEVICES> first_display;
-shMAX72xxMini<CS1_PIN, NUM_DEVICES> second_display;
+// инициируем два модуля из четырех устройств
+shMAX72xxMini<CS1_PIN, NUM_DEVICES> first_display;
+shMAX72xxMini<CS2_PIN, NUM_DEVICES> second_display;
+
+// создаем два экземпляра SPI
+#if defined(ARDUINO_ARCH_STM32)
+
+// если используем stm32duino
+SPIClass SPI_1(DIN1_PIN, MISO1_PIN, CLK1_PIN);
+SPIClass SPI_2(DIN2_PIN, MISO2_PIN, CLK2_PIN);
+
+#elif defined(__STM32F1__)
+
+// если используем Arduino_STM32 by Roger Clark
+SPIClass SPI_1(1);
+SPIClass SPI_2(2);
+
+#endif
 
 // строки для вывода на экран
-char first_string[] = "SPI - first SPI interface; первый SPI-интерфейс";
-char second_string[] = "SPI1 - second SPI interface; второй SPI-интерфейс";
+char first_string[] = "SPI1 - first SPI interface; первый SPI-интерфейс";
+char second_string[] = "SPI2 - second SPI interface; второй SPI-интерфейс";
 
 uint8_t *first_data = NULL;  // буфер для вывода на первый экран
 uint8_t *second_data = NULL; // буфер для вывода на второй экран
@@ -144,30 +158,28 @@ void setData(char *_str, uint8_t *_data)
 
 void setup()
 {
-  first_display.init(CLK_PIN, DIN_PIN);
+  // инициализация первого дисплея
+  first_display.setSPI(&SPI_1);
+  first_display.init();
   first_display.setBrightnessForAllDevices(4);
   first_display.setDirection(2); // установите нужный угол поворота
 
   first_data_count = getLengthOfString(first_string) * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
   // выделение памяти под буфер
-  // first_data = new uint8_t[first_data_count];
   first_data = (uint8_t *)calloc(first_data_count, sizeof(uint8_t));
   // если память выделена успешно, заполнение буфера битовыми масками символов
   if (first_data != NULL)
   {
     setData(first_string, first_data);
   }
-}
 
-void setup1()
-{
-  second_display.setSPI(&SPI1);
-  second_display.init(CLK1_PIN, DIN1_PIN);
+  // инициализация второго дисплея
+  second_display.setSPI(&SPI_2);
+  second_display.init();
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота
 
   second_data_count = getLengthOfString(second_string) * (LETTER_WIDTH + CHARACTER_SPACING) + NUM_DEVICES * 8;
-  // second_data = new uint8_t[second_data_count];
   second_data = (uint8_t *)calloc(second_data_count, sizeof(uint8_t));
   // если память выделена успешно, заполнение буфера битовыми масками символов
   if (second_data != NULL)
@@ -199,10 +211,7 @@ void loop()
       n = 1;
     }
   }
-}
 
-void loop1()
-{
   static uint32_t timer1 = 0;
   static uint16_t m = 1;
 

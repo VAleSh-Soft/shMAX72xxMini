@@ -11,15 +11,15 @@
 #endif
 
 // флаг доступности второго и более интерфейса SPI
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
-#define SPI1_AVAILABLE 1
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32) || \
+    defined(ARDUINO_ARCH_STM32) || defined(__STM32F1__)
+#define OTHER_SPI_AVAILABLE 1
 #else
-#define SPI1_AVAILABLE 0
+#define OTHER_SPI_AVAILABLE 0
 #endif
 
 // флаг доступности переназначения пинов SPI
-#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32) || \
-    defined(ARDUINO_ARCH_ESP8266)
+#if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32)
 #define CUSTOM_SPI_PINS_AVAILABLE 1
 #else
 #define CUSTOM_SPI_PINS_AVAILABLE 0
@@ -58,8 +58,8 @@
 
 #if MINICORE_AVR_ATMEGA328PB
 
-constexpr uint8_t PB_SPI0 = 0;
-constexpr uint8_t PB_SPI1 = 1;
+constexpr uint8_t SPI_SPI0 = 0;
+constexpr uint8_t SPI_SPI1 = 1;
 
 #else
 
@@ -170,7 +170,7 @@ public:
    *
    * @param spi выбор интерфейса - SPI или SPI1
    */
-  void init(uint8_t spi = PB_SPI0);
+  void init(uint8_t spi = SPI_SPI0);
 
 #else
 
@@ -182,7 +182,7 @@ public:
 
 #endif
 
-#if SPI1_AVAILABLE
+#if OTHER_SPI_AVAILABLE
   void setSPI(shSPIClass *spi);
 #endif
 
@@ -356,7 +356,7 @@ void shMAX72xxMini<csPin, numDevices>::start(uint8_t spi)
 {
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin, HIGH);
-  if (spi == PB_SPI1)
+  if (spi == SPI_SPI1)
   {
     _spi1 = &SPI1;
     _spi1->begin();
@@ -377,7 +377,7 @@ void shMAX72xxMini<csPin, numDevices>::start()
 {
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin, HIGH);
-  
+
   _spi->begin();
 
   _init();
@@ -385,18 +385,14 @@ void shMAX72xxMini<csPin, numDevices>::start()
 
 #endif
 
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+#if defined(ARDUINO_ARCH_ESP32)
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::start(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin)
 {
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin, HIGH);
-#if defined(ARDUINO_ARCH_ESP32)
+
   _spi->begin(sck_pin, miso_pin, mosi_pin, csPin);
-#else
-  _spi->pins(sck_pin, miso_pin, mosi_pin, csPin);
-  _spi->begin();
-#endif
 
   _init();
 }
@@ -580,7 +576,7 @@ void shMAX72xxMini<csPin, numDevices>::init(int8_t sck_pin, int8_t mosi_pin, int
   _spi->setTX(mosi_pin);
 #endif
 
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+#if defined(ARDUINO_ARCH_ESP32)
   start(sck_pin, mosi_pin, miso_pin);
 #else
   start();
@@ -607,7 +603,7 @@ void shMAX72xxMini<csPin, numDevices>::init()
 
 #endif
 
-#if SPI1_AVAILABLE
+#if OTHER_SPI_AVAILABLE
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::setSPI(shSPIClass *spi)
 {

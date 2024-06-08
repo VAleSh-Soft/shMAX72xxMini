@@ -61,6 +61,10 @@
 constexpr uint8_t PB_SPI0 = 0;
 constexpr uint8_t PB_SPI1 = 1;
 
+#else
+
+SPISettings spi_settings(1000000ul, MSBFIRST, SPI_MODE0);
+
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
@@ -92,14 +96,14 @@ private:
   SPI1Class *_spi1 = NULL;
   SPIClass *_spi = NULL;
   bool is_spi1 = false;
-#else
-  shSPIClass *_spi = NULL;
-#endif
 
   // настройки SPI-интерфейса
   uint32_t spi_clock = 1000000ul;
   uint8_t spi_bit_order = MSBFIRST;
   uint8_t spi_data_mode = SPI_MODE0;
+#else
+  shSPIClass *_spi = &SPI;
+#endif
 
   // первоначальная инициализация матрицы
   void _init();
@@ -373,6 +377,7 @@ void shMAX72xxMini<csPin, numDevices>::start()
 {
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin, HIGH);
+  
   _spi->begin();
 
   _init();
@@ -408,7 +413,7 @@ void shMAX72xxMini<csPin, numDevices>::transfer_data()
                                                  spi_bit_order,
                                                  spi_data_mode));
 #else
-  _spi->beginTransaction(SPISettings(spi_clock, spi_bit_order, spi_data_mode));
+  _spi->beginTransaction(spi_settings);
 #endif
 
   digitalWrite(csPin, LOW);
@@ -618,9 +623,13 @@ void shMAX72xxMini<csPin, numDevices>::setSPISettings(uint32_t clock,
                                                       uint8_t bitOrder,
                                                       uint8_t dataMode)
 {
+#if MINICORE_AVR_ATMEGA328PB
   spi_clock = clock;
   spi_bit_order = bitOrder;
   spi_data_mode = dataMode;
+#else
+  spi_settings = SPISettings(clock, bitOrder, dataMode);
+#endif
 }
 
 template <uint8_t csPin, uint8_t numDevices>

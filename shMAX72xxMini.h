@@ -61,10 +61,6 @@
 constexpr uint8_t SPI_SPI0 = 0;
 constexpr uint8_t SPI_SPI1 = 1;
 
-#else
-
-SPISettings spi_settings(1000000ul, MSBFIRST, SPI_MODE0);
-
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
@@ -91,16 +87,13 @@ private:
   bool flip = false;  // отразить изображение
   uint8_t direct = 0; // поворот изображения, 0-3
 
+  uint32_t spi_frequensy = 1000000ul; // частота работы SPI-интерфейса
+
   // SPI интерфейс для вывода данных
 #if MINICORE_AVR_ATMEGA328PB
   SPI1Class *_spi1 = NULL;
   SPIClass *_spi = NULL;
   bool is_spi1 = false;
-
-  // настройки SPI-интерфейса
-  uint32_t spi_clock = 1000000ul;
-  uint8_t spi_bit_order = MSBFIRST;
-  uint8_t spi_data_mode = SPI_MODE0;
 #else
   shSPIClass *_spi = &SPI;
 #endif
@@ -189,11 +182,9 @@ public:
   /**
    * @brief настройка параметров SPI
    *
-   * @param clock частота синхронизации SPI, Гц
-   * @param bitOrder порядок следования бит; возможные варианты - MSBFIRST и LSBFIRST
-   * @param dataMode режим работы интерфейса; возможные варианты - SPI_MODE0, SPI_MODE1, SPI_MODE2, SPI_MODE3
+   * @param frequency рабочая частота SPI, Гц
    */
-  void setSPISettings(uint32_t clock, uint8_t bitOrder, uint8_t dataMode);
+  void setSPIFrequency(uint32_t frequency);
 
   /**
    * @brief отключить устройство
@@ -402,14 +393,14 @@ template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::transfer_data()
 {
 #if MINICORE_AVR_ATMEGA328PB
-  (is_spi1) ? _spi1->beginTransaction(SPI1Settings(spi_clock,
-                                                   spi_bit_order,
-                                                   spi_data_mode))
-            : _spi->beginTransaction(SPISettings(spi_clock,
-                                                 spi_bit_order,
-                                                 spi_data_mode));
+  (is_spi1) ? _spi1->beginTransaction(SPI1Settings(spi_frequensy,
+                                                   MSBFIRST,
+                                                   SPI_MODE0))
+            : _spi->beginTransaction(SPISettings(spi_frequensy,
+                                                 MSBFIRST,
+                                                 SPI_MODE0));
 #else
-  _spi->beginTransaction(spi_settings);
+  _spi->beginTransaction(SPISettings(spi_frequensy, MSBFIRST, SPI_MODE0));
 #endif
 
   digitalWrite(csPin, LOW);
@@ -615,17 +606,9 @@ void shMAX72xxMini<csPin, numDevices>::setSPI(shSPIClass *spi)
 #endif
 
 template <uint8_t csPin, uint8_t numDevices>
-void shMAX72xxMini<csPin, numDevices>::setSPISettings(uint32_t clock,
-                                                      uint8_t bitOrder,
-                                                      uint8_t dataMode)
+void shMAX72xxMini<csPin, numDevices>::setSPIFrequency(uint32_t frequency)
 {
-#if MINICORE_AVR_ATMEGA328PB
-  spi_clock = clock;
-  spi_bit_order = bitOrder;
-  spi_data_mode = dataMode;
-#else
-  spi_settings = SPISettings(clock, bitOrder, dataMode);
-#endif
+  spi_frequensy = frequency;
 }
 
 template <uint8_t csPin, uint8_t numDevices>

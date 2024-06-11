@@ -19,7 +19,7 @@ shutdownDevice	KEYWORD2
 shutdownAllDevices	KEYWORD2
 setDirection	KEYWORD2
 setFlip	KEYWORD2
-setSPISettings	KEYWORD2
+setSPIFrequency	KEYWORD2
 getDeviceCount	KEYWORD2
 setScanLimit	KEYWORD2
 setBrightness	KEYWORD2

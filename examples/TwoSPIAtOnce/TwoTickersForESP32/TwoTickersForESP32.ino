@@ -10,29 +10,21 @@
  *
  *        В примере используется одновременный вывод бегущих строк на
  *        две матрицы из четырех модулей каждая;
+ * 
+ *        Номера пинов для разных контроллеров (esp32, esp32s3, esp32s2)
+ *        указаны в файле pins.h
  *
- * @version 1.0
- * @date 01.06.2024
+ * @version 1.5
+ * @date 13.06.2024
  *
  * @copyright Copyright (c) 2024
  *
  */
 
 #include "font.h"
+#include "pins.h"
 #include <shMAX72xxMini.h>
 #include <pgmspace.h>
-
-// пины для подключения первой бегущей строки
-#define CS_PIN 5
-#define CLK_PIN 18
-#define DIN_PIN 23
-#define MISO_PIN 19
-
-// пины для подключения второй бегущей строки
-#define CS1_PIN 15
-#define CLK1_PIN 14
-#define DIN1_PIN 13
-#define MISO1_PIN 12
 
 #define NUM_DEVICES 4
 
@@ -45,11 +37,19 @@ shMAX72xxMini<CS_PIN, NUM_DEVICES> first_display;
 shMAX72xxMini<CS1_PIN, NUM_DEVICES> second_display;
 
 // создаем два экземпляра SPI
-SPIClass _vspi(VSPI);
-SPIClass _hspi(HSPI);
+#if CONFIG_IDF_TARGET_ESP32
+SPIClass _spi0(VSPI); // VSPI доступен только на esp32
+#else
+SPIClass _spi0(FSPI);
+#endif
+SPIClass _spi1(HSPI);
 
 // строки для вывода на экран
+#if CONFIG_IDF_TARGET_ESP32
 char first_string[] = "VSPI - first SPI interface; первый SPI-интерфейс";
+#else
+char first_string[] = "FSPI - first SPI interface; первый SPI-интерфейс";
+#endif
 char second_string[] = "HSPI - second SPI interface; второй SPI-интерфейс";
 
 uint8_t *first_data = NULL;  // буфер для вывода на первый экран
@@ -147,7 +147,7 @@ void setData(char *_str, uint8_t *_data)
 
 void setup()
 {
-  first_display.setSPI(&_vspi);
+  first_display.setSPI(&_spi0);
   first_display.init(CLK_PIN, DIN_PIN, MISO_PIN);
   first_display.setBrightnessForAllDevices(4);
   first_display.setDirection(2); // установите нужный угол поворота
@@ -162,7 +162,7 @@ void setup()
     setData(first_string, first_data);
   }
 
-  second_display.setSPI(&_hspi);
+  second_display.setSPI(&_spi1);
   second_display.init(CLK1_PIN, DIN1_PIN, MISO1_PIN);
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота

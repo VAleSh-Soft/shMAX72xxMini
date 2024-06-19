@@ -325,6 +325,16 @@
 Для **Blue Pill** при использовании аддона **stm32duino** возможно переназначение пинов для **SPI1** (но не средствами библиотеки):
   - **DataIn** (**DIN**) - к пину **MOSI1** (**PB5**);
   - **CLK** - к пину **SCK1** (**PB3**);
+```
+shMAX72xxMini<PA15, NUM_DEVICES> display;
+SPIClass SPI_1(PB5, PB4, PB3);
+
+void setup()
+{
+  display.setSPI(&SPI_1);
+  display.init();
+}
+```
 
 ### Аддоны, используемые для работы с другими платами
 
@@ -338,6 +348,8 @@
 #### ATtiny88
 Для работы с МК  **ATtiny88** используется аддон **ATTinyCore by Spence Konde**, ссылка для установки:
 - http://drazzy.com/package_drazzy.com_index.json
+
+Если не знаете, какую плату выбрать, выбирайте **ATtiny88 (Micronucleus, MH-ET t88w/16MHz CLOCK)**.
 
 #### ESP8266
 
@@ -353,10 +365,14 @@
 
 Если не знаете, какую плату выбрать, выбирайте **ESP32 Dev Module** (или **ESP32C3 Dev Module**, **ESP32S3 Dev Module**, **ESP32S2 Dev Module** - в зависимости от того, какой процессор используется на вашей плате).
 
+*Для работы с МК **ESP32C2**, **ESP32C6**, **ESP32H2** требуется версия аддона не ниже **3.0**.*
+
 #### RP2040
 
 Для работы с **RP2040** используется аддон **Raspberry Pi Pico/RP2040**, ссылка для установки:
 - https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+
+Если не знаете, какую плату выбрать, выбирайте **Generic RP2040**.
 
 #### STM32
 

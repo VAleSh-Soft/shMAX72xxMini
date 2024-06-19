@@ -12,7 +12,7 @@
 
 // флаг доступности второго и более интерфейса SPI
 #if defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_ESP32) || \
-    defined(ARDUINO_ARCH_STM32) || defined(__STM32F1__)
+    defined(ARDUINO_ARCH_STM32) || defined(__STM32F1__) || defined(__STM32F4__)
 #define OTHER_SPI_AVAILABLE 1
 #else
 #define OTHER_SPI_AVAILABLE 0

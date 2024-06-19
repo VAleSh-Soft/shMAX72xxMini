@@ -33,8 +33,8 @@
 #define TICKER_FPS 50       // частота смены кадров бегущей строки в секунду (fps)
 
 // инициируем два модуля из четырех устройств
-shMAX72xxMini<CS_PIN, NUM_DEVICES> first_display;
-shMAX72xxMini<CS1_PIN, NUM_DEVICES> second_display;
+shMAX72xxMini<CS1_PIN, NUM_DEVICES> first_display;
+shMAX72xxMini<CS2_PIN, NUM_DEVICES> second_display;
 
 // создаем два экземпляра SPI
 #if CONFIG_IDF_TARGET_ESP32
@@ -148,7 +148,7 @@ void setData(char *_str, uint8_t *_data)
 void setup()
 {
   first_display.setSPI(&_spi0);
-  first_display.init(CLK_PIN, DIN_PIN, MISO_PIN);
+  first_display.init(CLK1_PIN, DIN1_PIN, MISO1_PIN);
   first_display.setBrightnessForAllDevices(4);
   first_display.setDirection(2); // установите нужный угол поворота
 
@@ -163,7 +163,7 @@ void setup()
   }
 
   second_display.setSPI(&_spi1);
-  second_display.init(CLK1_PIN, DIN1_PIN, MISO1_PIN);
+  second_display.init(CLK2_PIN, DIN2_PIN, MISO2_PIN);
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота
 

@@ -5,8 +5,9 @@
  * @brief Пример одновременного использования двух SPI-интерфейсов для
  *        независимого вывода данных на каждый;
  *
- *        Скетч написан для использования на STM32 Blue Pill; используемые для
- *        этого аддоны см. в файле readme.md
+ *        Скетч написан для использования на STM32 Blue Pill; скетч так же 
+ *        работает и на Black Pill; используемые для этого аддоны см. в файле
+ *        readme.md
  *
  *        В примере используется одновременный вывод бегущих строк на
  *        две матрицы из четырех модулей каждая;
@@ -26,7 +27,6 @@
 #define CS1_PIN PA4
 #define CLK1_PIN PA5
 #define DIN1_PIN PA7
-#define MISO1_PIN PA6
 
 // пины для подключения второй бегущей строки
 #define CS2_PIN PB12
@@ -44,18 +44,16 @@
 shMAX72xxMini<CS1_PIN, NUM_DEVICES> first_display;
 shMAX72xxMini<CS2_PIN, NUM_DEVICES> second_display;
 
-// создаем два экземпляра SPI
+// создаем экземпляр SPI2
 #if defined(ARDUINO_ARCH_STM32)
 
 // если используем stm32duino
-SPIClass SPI_1(DIN1_PIN, MISO1_PIN, CLK1_PIN);
-SPIClass SPI_2(DIN2_PIN, MISO2_PIN, CLK2_PIN);
+SPIClass SPI2(DIN2_PIN, MISO2_PIN, CLK2_PIN);
 
-#elif defined(__STM32F1__)
+#elif defined(__STM32F1__) || defined(__STM32F4__)
 
 // если используем Arduino_STM32 by Roger Clark
-SPIClass SPI_1(1);
-SPIClass SPI_2(2);
+SPIClass SPI2(2);
 
 #endif
 
@@ -159,7 +157,6 @@ void setData(char *_str, uint8_t *_data)
 void setup()
 {
   // инициализация первого дисплея
-  first_display.setSPI(&SPI_1);
   first_display.init();
   first_display.setBrightnessForAllDevices(4);
   first_display.setDirection(2); // установите нужный угол поворота
@@ -174,7 +171,7 @@ void setup()
   }
 
   // инициализация второго дисплея
-  second_display.setSPI(&SPI_2);
+  second_display.setSPI(&SPI2);
   second_display.init();
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота

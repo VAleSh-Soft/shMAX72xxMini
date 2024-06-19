@@ -342,7 +342,7 @@ void setup()
 
 #### ATmega328pb
 
-Для работы с МК  **ATmega3288pb** используется аддон **MiniCore by MCUdude**, ссылка для установки:
+Для работы с МК  **ATmega328pb** используется аддон **MiniCore by MCUdude**, ссылка для установки:
 - https://mcudude.github.io/MiniCore/package_MCUdude_MiniCore_index.json
 
 #### ATtiny88

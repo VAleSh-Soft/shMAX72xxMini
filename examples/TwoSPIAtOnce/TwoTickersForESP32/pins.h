@@ -28,4 +28,17 @@
 #define DIN2_PIN 6
 #define MISO2_PIN 5
 
+// ---- esp32c3 ---------------------------------
+#elif CONFIG_IDF_TARGET_ESP32C3
+
+#define CS1_PIN 7
+#define CLK1_PIN 4
+#define DIN1_PIN 6
+#define MISO1_PIN 5
+
+#define CS2_PIN 8
+#define CLK2_PIN 3
+#define DIN2_PIN 2
+#define MISO2_PIN 1
+
 #endif

@@ -42,7 +42,11 @@ SPIClass _spi0(VSPI); // VSPI доступен только на esp32
 #else
 SPIClass _spi0(FSPI);
 #endif
+#if CONFIG_IDF_TARGET_ESP32C3
+SPIClass _spi1(FSPI); // HSPI не доступен на esp32c3, поэтому создаем второй FSPI-интерфейс
+#else
 SPIClass _spi1(HSPI);
+#endif
 
 // строки для вывода на экран
 #if CONFIG_IDF_TARGET_ESP32
@@ -50,7 +54,12 @@ char first_string[] = "VSPI - first SPI interface; первый SPI-интерф
 #else
 char first_string[] = "FSPI - first SPI interface; первый SPI-интерфейс";
 #endif
+
+#if CONFIG_IDF_TARGET_ESP32C3
+char second_string[] = "FSPI - second SPI interface; второй SPI-интерфейс";
+#else
 char second_string[] = "HSPI - second SPI interface; второй SPI-интерфейс";
+#endif
 
 uint8_t *first_data = NULL;  // буфер для вывода на первый экран
 uint8_t *second_data = NULL; // буфер для вывода на второй экран

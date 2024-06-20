@@ -26,15 +26,15 @@ uint32_t delay_time = 20;
 void writeChar(uint8_t addr, uint8_t *data, bool disapp = false)
 {
   // символы выпадают сверху и уходят вниз
-  for (int8_t i = 7; i >= 0; i--)
+  for (int8_t i = 8; i >= 0; i--)
   {
     for (uint8_t j = 0; j < 5; j++)
     {
-      uint8_t x = (disapp) ? 7 - i : i * -1;
+      uint8_t x = (disapp) ? 8 - i : i * -1;
       matrix_display.setColumn(addr, j, data[j], x, false);
     }
     matrix_display.update();
-    delay(20);
+    delay(delay_time);
   }
 }
 

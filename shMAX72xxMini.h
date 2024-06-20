@@ -833,7 +833,7 @@ void shMAX72xxMini<csPin, numDevices>::setRow(uint8_t addr,
 
   if (offset != 0)
   {
-    offset %= 8;
+    offset = (offset > 8) ? 8 : ((offset < -8) ? -8 : offset);
     value = (offset < 0) ? value << (offset * -1) : value >> offset;
   }
 
@@ -927,7 +927,7 @@ void shMAX72xxMini<csPin, numDevices>::setColumn(uint8_t addr,
 
   if (offset != 0)
   {
-    offset %= 8;
+    offset = (offset > 8) ? 8 : ((offset < -8) ? -8 : offset);
     value = (offset < 0) ? value << (offset * -1) : value >> offset;
   }
 

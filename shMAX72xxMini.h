@@ -130,7 +130,7 @@ private:
   void _setRow(uint8_t addr, uint8_t row, uint8_t value, bool upd);
 
   // отрисовка одиночного светодиода
-  void _setLed(uint8_t addr, uint8_t row, uint8_t column, boolean state, bool upd);
+  void _setLed(uint8_t addr, uint8_t row, uint8_t column, bool state, bool upd);
 
   bool _getLedState(uint8_t addr, uint8_t row, uint8_t column);
 
@@ -269,7 +269,7 @@ public:
    * @param state устанавливаемое состояние светодиода
    * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
    */
-  void setLed(uint8_t addr, uint8_t row, uint8_t column, boolean state, bool upd = false);
+  void setLed(uint8_t addr, uint8_t row, uint8_t column, bool state, bool upd = false);
 
   /**
    * @brief получение состояние одиночного светодиода устройства с учетом нужного поворота и отражения изображения
@@ -292,7 +292,18 @@ public:
   void setRow(uint8_t addr, uint8_t row, uint8_t value, bool upd = false);
 
   /**
-   * @brief получение битовой маски строки из буфера устройства
+   * @brief установить строку устройства с учетом нужного поворота и отражения изображения
+   *
+   * @param addr индекс устройства в каскаде, начиная с нуля
+   * @param row строка (координата Y)
+   * @param value битовая маска, в которой каждый бит соотвествует состоянию соответствующего светодиода строки
+   * @param offset горизонтальное смещение строки, значение -8..8; при offset = 0 строка выводится с первой колонки, при offset < 0 строка смещается влево, при offset > 0 строка смещается вправо
+   * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
+   */
+  void setRow(uint8_t addr, uint8_t row, uint8_t value, int8_t offset, bool upd);
+
+  /**
+   * @brief получение битовой маски отображаемой строки из буфера устройства
    *
    * @param addr индекс устройства в каскаде, начиная с нуля
    * @param row строка (координата Y)
@@ -311,7 +322,18 @@ public:
   void setColumn(uint8_t addr, uint8_t column, uint8_t value, bool upd = false);
 
   /**
-   * @brief получение битовой маски столбца из буфера устройства
+   * @brief установить столбец устройства с учетом нужного поворота, отражения и смещения по вертикали изображения
+   *
+   * @param addr индекс устройства в каскаде, начиная с нуля
+   * @param column столбец (координата X)
+   * @param value битовая маска, в которой каждый бит соотвествует состоянию соответствующего светодиода столбца
+   * @param offset вертикальное смещение столбца, значение -8..8; при offset = 0 столбец выводится с первой строки при offset < 0 столбец смещается вверх, при offset > 0 столбец смещается вниз
+   * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
+   */
+  void setColumn(uint8_t addr, uint8_t column, uint8_t value, int8_t offset, bool upd);
+
+  /**
+   * @brief получение битовой маски отображаемого столбца из буфера устройства
    *
    * @param addr индекс устройства в каскаде, начиная с нуля
    * @param column столбец (координата X)
@@ -473,7 +495,6 @@ void shMAX72xxMini<csPin, numDevices>::_setColumn(uint8_t addr,
                                                   bool upd)
 {
   uint8_t val;
-
   for (uint8_t row = 0; row < 8; row++)
   {
     val = value >> (7 - row);
@@ -504,7 +525,7 @@ template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::_setLed(uint8_t addr,
                                                uint8_t row,
                                                uint8_t column,
-                                               boolean state,
+                                               bool state,
                                                bool upd)
 {
   uint8_t offset = addr * 8;
@@ -699,7 +720,7 @@ template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::setLed(uint8_t addr,
                                               uint8_t row,
                                               uint8_t column,
-                                              boolean state,
+                                              bool state,
                                               bool upd)
 {
   if (addr >= numDevices || row > 7 || column > 7)
@@ -799,6 +820,27 @@ void shMAX72xxMini<csPin, numDevices>::setRow(uint8_t addr,
 }
 
 template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::setRow(uint8_t addr,
+                                              uint8_t row,
+                                              uint8_t value,
+                                              int8_t offset,
+                                              bool upd)
+{
+  if (addr >= numDevices || row > 7)
+  {
+    return;
+  }
+
+  if (offset != 0)
+  {
+    offset %= 8;
+    value = (offset < 0) ? value << (offset * -1) : value >> offset;
+  }
+
+  setRow(addr, row, value, upd);
+}
+
+template <uint8_t csPin, uint8_t numDevices>
 uint8_t shMAX72xxMini<csPin, numDevices>::getRow(uint8_t addr, uint8_t row)
 {
   uint8_t result = 0x00;
@@ -869,6 +911,27 @@ void shMAX72xxMini<csPin, numDevices>::setColumn(uint8_t addr,
   }
   (((direct) >> (0)) & 0x01) ? _setRow(addr, column, value, upd)
                              : _setColumn(addr, column, value, upd);
+}
+
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::setColumn(uint8_t addr,
+                                                 uint8_t column,
+                                                 uint8_t value,
+                                                 int8_t offset,
+                                                 bool upd)
+{
+  if (addr >= numDevices || column > 7)
+  {
+    return;
+  }
+
+  if (offset != 0)
+  {
+    offset %= 8;
+    value = (offset < 0) ? value << (offset * -1) : value >> offset;
+  }
+
+  setColumn(addr, column, value, upd);
 }
 
 template <uint8_t csPin, uint8_t numDevices>

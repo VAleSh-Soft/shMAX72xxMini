@@ -48,12 +48,12 @@ shMAX72xxMini<CS2_PIN, NUM_DEVICES> second_display;
 #if defined(ARDUINO_ARCH_STM32)
 
 // если используем stm32duino
-SPIClass SPI2(DIN2_PIN, MISO2_PIN, CLK2_PIN);
+SPIClass SPI_2(DIN2_PIN, MISO2_PIN, CLK2_PIN);
 
 #elif defined(__STM32F1__) || defined(__STM32F4__)
 
 // если используем Arduino_STM32 by Roger Clark
-SPIClass SPI2(2);
+SPIClass SPI_2(2);
 
 #endif
 
@@ -171,7 +171,7 @@ void setup()
   }
 
   // инициализация второго дисплея
-  second_display.setSPI(&SPI2);
+  second_display.setSPI(&SPI_2);
   second_display.init();
   second_display.setBrightnessForAllDevices(4);
   second_display.setDirection(2); // установите нужный угол поворота

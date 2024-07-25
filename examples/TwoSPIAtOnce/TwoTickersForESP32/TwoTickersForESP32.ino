@@ -12,10 +12,10 @@
  *        две матрицы из четырех модулей каждая;
  * 
  *        Номера пинов для разных контроллеров (esp32, esp32s3, esp32s2,
- *        esp32c3) указаны в файле pins.h
+ *        esp32c3, esp32c6, esp32h2) указаны в файле pins.h
  *
  * @version 1.5
- * @date 13.06.2024
+ * @date 25.17.2024
  *
  * @copyright Copyright (c) 2024
  *
@@ -42,23 +42,37 @@ SPIClass _spi0(VSPI); // VSPI доступен только на esp32
 #else
 SPIClass _spi0(FSPI);
 #endif
-#if CONFIG_IDF_TARGET_ESP32C3
-SPIClass _spi1(FSPI); // HSPI не доступен на esp32c3, поэтому создаем второй FSPI-интерфейс
+
+#if CONFIG_IDF_TARGET_ESP32H2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+SPIClass _spi1(FSPI); // HSPI не доступен на esp32c3, esp32c6 и esp32h2, поэтому создаем второй FSPI-интерфейс
 #else
 SPIClass _spi1(HSPI);
 #endif
 
-// строки для вывода на экран
+// строка для вывода на первый экран
 #if CONFIG_IDF_TARGET_ESP32
+// для esp32
 char first_string[] = "VSPI - first SPI interface; первый SPI-интерфейс";
+
+#elif CONFIG_IDF_TARGET_ESP32H2 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6
+// для esp32h2, esp32c3 и esp32c6
+char first_string[] = "FSPI0 - first SPI interface; первый SPI-интерфейс";
+
 #else
+// для esp32s2 и esp32s3
 char first_string[] = "FSPI - first SPI interface; первый SPI-интерфейс";
+
 #endif
 
-#if CONFIG_IDF_TARGET_ESP32C3
-char second_string[] = "FSPI - second SPI interface; второй SPI-интерфейс";
+// строка для вывода на второй экран
+#if CONFIG_IDF_TARGET_ESP32H2 || CONFIG_IDF_TARGET_ESP32C3
+// для esp32h2 и esp32c3
+char second_string[] = "FSPI1 - second SPI interface; второй SPI-интерфейс";
+
 #else
+// для esp32, esp32s2 и esp32s3
 char second_string[] = "HSPI - second SPI interface; второй SPI-интерфейс";
+
 #endif
 
 uint8_t *first_data = NULL;  // буфер для вывода на первый экран

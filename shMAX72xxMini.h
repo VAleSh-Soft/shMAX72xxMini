@@ -279,6 +279,7 @@ public:
    * @param column столбец (координата X)
    * @return true, если светодиод включен
    */
+  bool getLedState(uint8_t addr, uint8_t row, uint8_t column);
   bool getLedStat(uint8_t addr, uint8_t row, uint8_t column);
 
   /**
@@ -752,9 +753,9 @@ void shMAX72xxMini<csPin, numDevices>::setLed(uint8_t addr,
 }
 
 template <uint8_t csPin, uint8_t numDevices>
-bool shMAX72xxMini<csPin, numDevices>::getLedStat(uint8_t addr,
-                                                  uint8_t row,
-                                                  uint8_t column)
+bool shMAX72xxMini<csPin, numDevices>::getLedState(uint8_t addr,
+                                                   uint8_t row,
+                                                   uint8_t column)
 {
   bool result = false;
   if (addr >= numDevices || row > 7 || column > 7)
@@ -785,6 +786,14 @@ bool shMAX72xxMini<csPin, numDevices>::getLedStat(uint8_t addr,
   }
 
   return (_getLedState(addr, row, column));
+}
+
+template <uint8_t csPin, uint8_t numDevices>
+bool shMAX72xxMini<csPin, numDevices>::getLedStat(uint8_t addr,
+                                                  uint8_t row,
+                                                  uint8_t column)
+{
+  return (getLedState(addr, row, column));
 }
 
 template <uint8_t csPin, uint8_t numDevices>
@@ -1066,7 +1075,7 @@ public:
    * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
    */
   void setChar(uint16_t index, uint8_t value, bool showDot = false, bool upd = false);
-  
+
   /**
    * @brief вывод символа на индикатор
    *

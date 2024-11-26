@@ -75,7 +75,7 @@ void copyData(uint8_t _type)
       case 2: // перенос попиксельно
         for (uint8_t k = 0; k < 8; k++)
         {
-          disp.setLed(i + 2, j, k, disp.getLedStat(i, j, k));
+          disp.setLed(i + 2, j, k, disp.getLedState(i, j, k));
         }
         break;
       }

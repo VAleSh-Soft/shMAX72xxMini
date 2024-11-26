@@ -1056,6 +1056,7 @@ public:
    * @return uint8_t
    */
   uint16_t getNumDigits();
+
   /**
    * @brief вывод символа на индикатор
    *
@@ -1065,6 +1066,17 @@ public:
    * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
    */
   void setChar(uint16_t index, uint8_t value, bool showDot = false, bool upd = false);
+  
+  /**
+   * @brief вывод символа на индикатор
+   *
+   * @param addr индекс устройства в каскаде, начиная с нуля
+   * @param num_index индекс знака в устройстве, начиная с нуля
+   * @param value битовая маска выводимого символа
+   * @param showDot показывать или нет десятичную точку
+   * @param upd true - обновить изображение сразу, иначе изображение будет обновлено только после вызова метода update
+   */
+  void setChar(uint8_t addr, uint8_t num_index, uint8_t value, bool showDot = false, bool upd = false);
 };
 
 // ---- public ----------------------------------
@@ -1086,13 +1098,21 @@ void shMAX72xx7Segment<csPin, numDevices, numDigits>::setChar(uint16_t index, ui
     return;
   }
 
-  uint8_t addr = index / 8;
-  uint8_t idx = index % 8;
+  setChar(index / 8, index % 8, value, showDot, upd);
+}
+
+template <uint8_t csPin, uint8_t numDevices, uint16_t numDigits>
+void shMAX72xx7Segment<csPin, numDevices, numDigits>::setChar(uint8_t addr, uint8_t num_index, uint8_t value, bool showDot, bool upd)
+{
+  if (addr >= numDevices || num_index >= 8)
+  {
+    return;
+  }
+
   if (showDot)
   {
     value |= 0b10000000;
   }
-  shMAX72xxMini<csPin, numDevices>::setRow(addr, idx, value, upd);
+  shMAX72xxMini<csPin, numDevices>::setRow(addr, num_index, value, upd);
 }
-
 // ==== end shMAX72xx7Segment ========================

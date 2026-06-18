@@ -1035,7 +1035,7 @@ const uint8_t PROGMEM digitToSegment[] = {
     0b01000111  // F
 };
 
-const uint8_t minusSegments = 0b00000001;
+constexpr uint8_t minusSegments = 0b00000001;
 
 /**
  * @brief конструктор объекта

@@ -15,7 +15,7 @@
  *        esp32c3, esp32c6, esp32h2) указаны в файле pins.h
  *
  * @version 1.5
- * @date 25.17.2024
+ * @date 25.07.2024
  *
  * @copyright Copyright (c) 2024
  *

@@ -38,6 +38,8 @@
 #endif
 #include <SPI.h>
 
+#define MAX_SPI_FREQUENCY 10000000ul // максимальная частота работы SPI-интерфейса
+
 // коды операций для MAX7221 и MAX7219
 #define OP_NOOP 0         // пустая команда, ничего не делать
 #define OP_DIGIT0 1       // первая строка
@@ -87,7 +89,7 @@ private:
   bool flip = false;  // отразить изображение
   uint8_t direct = 0; // поворот изображения, 0-3
 
-  uint32_t spi_frequensy = 1000000ul; // частота работы SPI-интерфейса
+  uint32_t spi_frequency = 1000000ul; // частота работы SPI-интерфейса
 
   // SPI интерфейс для вывода данных
 #if MINICORE_AVR_ATMEGA328PB
@@ -104,11 +106,10 @@ private:
   // первоначальная инициализация SPI
 #if MINICORE_AVR_ATMEGA328PB
   void start(uint8_t spi);
+#elif defined(ARDUINO_ARCH_ESP32)
+  void start(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin);
 #else
   void start();
-#endif
-#if defined(ARDUINO_ARCH_ESP32)
-  void start(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin);
 #endif
 
   // отправка данных через SPI
@@ -136,6 +137,10 @@ private:
 
   // обновление одного устройства; возможно обновление как только буфера, так и изображения на матрице; при этом возможно стирание буфера (и матрицы, соответсвенно)
   void _update(uint8_t addr, bool clear = false, bool transfer = true);
+
+  // пакетная отправка всего содержимого буфера status на все устройства;
+  // выполняется 8 SPI-посылок независимо от количества устройств в каскаде
+  void _flushRows();
 
 public:
   // Подключение устройства к Ардуино Uno/Nano/Pro mini:
@@ -182,7 +187,7 @@ public:
   /**
    * @brief настройка параметров SPI
    *
-   * @param frequency рабочая частота SPI, Гц
+   * @param frequency рабочая частота SPI, Гц; максимум 10000000 Гц (10МГц)
    */
   void setSPIFrequency(uint32_t frequency);
 
@@ -280,7 +285,6 @@ public:
    * @return true, если светодиод включен
    */
   bool getLedState(uint8_t addr, uint8_t row, uint8_t column);
-  bool getLedStat(uint8_t addr, uint8_t row, uint8_t column);
 
   /**
    * @brief установить строку устройства с учетом нужного поворота и отражения изображения
@@ -343,8 +347,8 @@ public:
   uint8_t getColumn(uint8_t addr, uint8_t column);
 
   /**
-   * @brief обновить все устройства
-   *
+   * @brief обновить все устройства; выводит содержимое программного буфера
+   * на все устройства каскада за 8 SPI-посылок независимо от устройств
    */
   void update();
 };
@@ -384,22 +388,7 @@ void shMAX72xxMini<csPin, numDevices>::start(uint8_t spi)
   _init();
 }
 
-#else
-
-template <uint8_t csPin, uint8_t numDevices>
-void shMAX72xxMini<csPin, numDevices>::start()
-{
-  pinMode(csPin, OUTPUT);
-  digitalWrite(csPin, HIGH);
-
-  _spi->begin();
-
-  _init();
-}
-
-#endif
-
-#if defined(ARDUINO_ARCH_ESP32)
+#elif defined(ARDUINO_ARCH_ESP32)
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::start(int8_t sck_pin, int8_t mosi_pin, int8_t miso_pin)
 {
@@ -410,20 +399,32 @@ void shMAX72xxMini<csPin, numDevices>::start(int8_t sck_pin, int8_t mosi_pin, in
 
   _init();
 }
+
+#else
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::start()
+{
+  pinMode(csPin, OUTPUT);
+  digitalWrite(csPin, HIGH);
+
+  _spi->begin();
+
+  _init();
+}
 #endif
 
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::transfer_data()
 {
 #if MINICORE_AVR_ATMEGA328PB
-  (is_spi1) ? _spi1->beginTransaction(SPI1Settings(spi_frequensy,
+  (is_spi1) ? _spi1->beginTransaction(SPI1Settings(spi_frequency,
                                                    MSBFIRST,
                                                    SPI_MODE0))
-            : _spi->beginTransaction(SPISettings(spi_frequensy,
+            : _spi->beginTransaction(SPISettings(spi_frequency,
                                                  MSBFIRST,
                                                  SPI_MODE0));
 #else
-  _spi->beginTransaction(SPISettings(spi_frequensy, MSBFIRST, SPI_MODE0));
+  _spi->beginTransaction(SPISettings(spi_frequency, MSBFIRST, SPI_MODE0));
 #endif
 
   digitalWrite(csPin, LOW);
@@ -571,10 +572,38 @@ void shMAX72xxMini<csPin, numDevices>::_update(uint8_t addr,
     {
       status[offset + i] = 0;
     }
-    if (transfer)
+  }
+
+  if (transfer)
+  {
+    // каждая SPI-посылка обновляет одну строку целевого устройства;
+    // остальные устройства в каскаде получают NOOP
+    for (uint8_t row = 0; row < 8; row++)
     {
-      spiTransfer(addr, i + 1, status[offset + i]);
+      for (uint8_t a = 0; a < numDevices; a++)
+      {
+        spidata[a * 2] = 0x00;
+        spidata[a * 2 + 1] = OP_NOOP;
+      }
+      spidata[addr * 2 + 1] = row + 1;
+      spidata[addr * 2] = status[offset + row];
+      transfer_data();
     }
+  }
+}
+
+template <uint8_t csPin, uint8_t numDevices>
+void shMAX72xxMini<csPin, numDevices>::_flushRows()
+{
+  // одна SPI-посылка обновляет одну и ту же строку всех устройств каскада
+  for (uint8_t row = 0; row < 8; row++)
+  {
+    for (uint8_t addr = 0; addr < numDevices; addr++)
+    {
+      spidata[addr * 2 + 1] = row + 1;
+      spidata[addr * 2] = status[addr * 8 + row];
+    }
+    transfer_data();
   }
 }
 
@@ -630,7 +659,7 @@ void shMAX72xxMini<csPin, numDevices>::setSPI(shSPIClass *spi)
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::setSPIFrequency(uint32_t frequency)
 {
-  spi_frequensy = frequency;
+  spi_frequency = (frequency <= MAX_SPI_FREQUENCY) ? frequency : MAX_SPI_FREQUENCY;
 }
 
 template <uint8_t csPin, uint8_t numDevices>
@@ -711,9 +740,13 @@ void shMAX72xxMini<csPin, numDevices>::clearDevice(uint8_t addr, bool upd)
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::clearAllDevices(bool upd)
 {
-  for (uint8_t addr = 0; addr < numDevices; addr++)
+  for (uint8_t i = 0; i < numDevices * 8; i++)
   {
-    _update(addr, true, upd);
+    status[i] = 0x00;
+  }
+  if (upd)
+  {
+    _flushRows();
   }
 }
 
@@ -786,14 +819,6 @@ bool shMAX72xxMini<csPin, numDevices>::getLedState(uint8_t addr,
   }
 
   return (_getLedState(addr, row, column));
-}
-
-template <uint8_t csPin, uint8_t numDevices>
-bool shMAX72xxMini<csPin, numDevices>::getLedStat(uint8_t addr,
-                                                  uint8_t row,
-                                                  uint8_t column)
-{
-  return (getLedState(addr, row, column));
 }
 
 template <uint8_t csPin, uint8_t numDevices>
@@ -999,10 +1024,7 @@ uint8_t shMAX72xxMini<csPin, numDevices>::getColumn(uint8_t addr, uint8_t column
 template <uint8_t csPin, uint8_t numDevices>
 void shMAX72xxMini<csPin, numDevices>::update()
 {
-  for (uint8_t addr = 0; addr < numDevices; addr++)
-  {
-    _update(addr);
-  }
+  _flushRows();
 }
 // ==== end shMAX72xxMini ============================
 
